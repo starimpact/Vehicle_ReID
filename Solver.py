@@ -1,3 +1,4 @@
+import logging
 import mxnet as mx
 import numpy as np
 
@@ -64,7 +65,9 @@ class CarReID_Solver(object):
     aux_names = self.symbol.list_auxiliary_states()
     self.aux_params = {k: mx.nd.zeros(s, self.ctx) for k, s in zip(aux_names, aux_shapes)}
 
-  def fit(self, train_data, grad_req='write'):
+  def fit(self, train_data, grad_req='write', showperiod=100, logger=None):
+    if logger is not None:
+      logger.info('Start training with %s', str(self.ctx))
     self.get_params(grad_req)
     self.optimizer = mx.optimizer.create(self.opt_method, rescale_grad=(1.0 / self.batchsize), **self.kwargs)
     self.updater = mx.optimizer.get_updater(self.optimizer)
@@ -97,10 +100,14 @@ class CarReID_Solver(object):
         outval = output_dict['reid_loss_output'].asnumpy()
         outval = np.mean(outval)
         cost.append(outval)
-        print 'cost:', outval, 'lr:', self.optimizer.lr, 'num_update:', self.optimizer.num_update
-      print epoch, '-------->', np.mean(cost)
-
-      epoch_end_callback(epoch, self.symbol, self.update_params, self.aux_params)
+        lrsch = self.optimizer.lr_scheduler
+        step = lrsch.step
+        nowlr = lrsch.base_lr
+        num_update = self.optimizer.num_update
+        if (num_update-1) % showperiod == 0:
+          print num_update, 'cost:', outval, 'lr:', nowlr, step
+          epoch_end_callback(epoch, self.symbol, self.update_params, self.aux_params)
+#          print databatch.label['label'].T
 
 
 
