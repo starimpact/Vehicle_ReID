@@ -54,6 +54,7 @@ class CarReID_Solver(object):
     for name, shape in zip(arg_names, arg_shapes):
       self.arg_params[name] = mx.nd.zeros(shape, self.ctx)
       if name.endswith('weight') or name.endswith('bias') or name.endswith('gamma') or name.endswith('beta'):
+#        print name
         self.update_params[name] = self.arg_params[name]
 
     self.init_args(self.arg_params)
@@ -65,21 +66,36 @@ class CarReID_Solver(object):
     aux_names = self.symbol.list_auxiliary_states()
     self.aux_params = {k: mx.nd.zeros(s, self.ctx) for k, s in zip(aux_names, aux_shapes)}
 
-  def fit(self, train_data, grad_req='write', showperiod=100, logger=None):
+  def set_params(self, whichone):
+    logging.info('loading checkpoint from %s-->%d...', self.prefix, whichone)
+    loadfunc = mx.model.load_checkpoint
+    self.symbol, update_params, aux_params = loadfunc(self.prefix, whichone)
+    for name in self.update_params:
+      self.arg_params[name][:] = update_params[name]
+    for name in self.aux_params:
+      self.aux_params[name][:] = aux_params[name]
+
+  def fit(self, train_data, grad_req='write', showperiod=100, whichone=None, logger=None):
     if logger is not None:
       logger.info('Start training with %s', str(self.ctx))
+
+    savefunc = mx.model.save_checkpoint
+
     self.get_params(grad_req)
+    if whichone is not None:
+      self.set_params(whichone)
     self.optimizer = mx.optimizer.create(self.opt_method, rescale_grad=(1.0 / self.batchsize), **self.kwargs)
     self.updater = mx.optimizer.get_updater(self.optimizer)
     self.executor = self.symbol.bind(self.ctx, self.arg_params, args_grad=self.grad_params,
                                      grad_req=grad_req, aux_states=self.aux_params)
     update_dict = self.update_params
-    epoch_end_callback = mx.callback.do_checkpoint(self.prefix)
+#    epoch_end_callback = mx.callback.do_checkpoint(self.prefix)
  
     # begin training
     for epoch in range(0, self.num_epoch):
       nbatch = 0
       train_data.reset()
+      num_batches = train_data.num_batches
       cost = [] 
       for databatch in train_data:
         nbatch += 1
@@ -93,8 +109,9 @@ class CarReID_Solver(object):
         self.executor.forward(is_train=True)
         self.executor.backward()
 
-        for key, arr in update_dict.items():
+        for key in update_dict:
 #          print key, np.sum(arr.asnumpy())
+          arr = self.grad_params[key]
           self.updater(key, arr, self.arg_params[key])
 
         outval = output_dict['reid_loss_output'].asnumpy()
@@ -104,9 +121,16 @@ class CarReID_Solver(object):
         step = lrsch.step
         nowlr = lrsch.base_lr
         num_update = self.optimizer.num_update
-        if (num_update-1) % showperiod == 0:
-          print num_update, 'cost:', outval, 'lr:', nowlr, step
-          epoch_end_callback(epoch, self.symbol, self.update_params, self.aux_params)
+        if num_update % showperiod == 0:
+#          argdict = self.arg_params
+#          argdict = self.grad_params
+#          print argdict['bn_5_gamma'].asnumpy(), argdict['bn_5_beta'].asnumpy()
+#          print argdict['fc_sub_weight'].asnumpy(), argdict['fc_sub_bias'].asnumpy()
+#          print argdict['fc_mul_weight'].asnumpy(), argdict['fc_mul_bias'].asnumpy()
+          print num_update, 'cost:', np.mean(cost), 'lr:', nowlr, num_batches 
+          cost = []
+#          epoch_end_callback(epoch, self.symbol, self.update_params, self.aux_params)
+          savefunc(self.prefix, epoch, self.symbol, self.update_params, self.aux_params)
 #          print databatch.label['label'].T
 
 

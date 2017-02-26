@@ -3,6 +3,8 @@ import mxnet as mx
 import DataGenerator as dg
 
 datafn = '/media/data1/mzhang/data/car_ReID_for_zhangming/data.list'
+datafn = '/home/mingzhang/data/car_ReID_for_zhangming/data.list'
+#datafn = '/home/mingzhang/data/car_ReID_for_zhangming/data_part.list'
 
 class CarReID_Iter(mx.io.DataIter):
   def __init__(self, data_names, data_shapes, label_names, label_shapes, 
