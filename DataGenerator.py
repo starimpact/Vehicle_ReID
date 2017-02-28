@@ -40,9 +40,9 @@ def get_pairs_data_label(data_infos, label_infos, datalist, data_rndidx, batch_n
   dataidx = 0
   datas = {}
   labels = {}
-  datas['part1_data'] = np.zeros(data_infos[0][1])
-  datas['part2_data'] = np.zeros(data_infos[1][1])
-  labels['label'] = np.zeros(label_infos[0][1])
+  datas['part1_data'] = np.zeros(data_infos[0][1], dtype=np.float32)
+  datas['part2_data'] = np.zeros(data_infos[1][1], dtype=np.float32)
+  labels['label'] = np.zeros(label_infos[0][1], dtype=np.float32)
   #ready same data
   for si in xrange(same_num):
     onecar = cars[si]
@@ -53,10 +53,12 @@ def get_pairs_data_label(data_infos, label_infos, datalist, data_rndidx, batch_n
     son0 = cv2.imread(tmpath)
 #    print 0, tmpath, son0.shape, stdsize
     stdson0 = cv2.resize(son0, (stdsize[1], stdsize[0]))
+    stdson0 = stdson0.astype(np.float32) / 255.0
     tmpath = carpath+'/'+carsons[rndidx[1]]
     son1 = cv2.imread(tmpath)
 #    print 1, tmpath, son1.shape, stdsize
     stdson1 = cv2.resize(son1, (stdsize[1], stdsize[0]))
+    stdson1 = stdson1.astype(np.float32) / 255.0
     datas['part1_data'][dataidx, 0] = stdson0[:, :, 0]
     datas['part1_data'][dataidx, 1] = stdson0[:, :, 1]
     datas['part1_data'][dataidx, 2] = stdson0[:, :, 2]
@@ -75,8 +77,10 @@ def get_pairs_data_label(data_infos, label_infos, datalist, data_rndidx, batch_n
     car1len = len(car1['sons'])
     son0 = cv2.imread(car0['path']+'/'+car0['sons'][np.random.randint(0, car0len)])
     stdson0 = cv2.resize(son0, (stdsize[1], stdsize[0]))
+    stdson0 = stdson0.astype(np.float32) / 255.0
     son1 = cv2.imread(car1['path']+'/'+car1['sons'][np.random.randint(0, car1len)])
     stdson1 = cv2.resize(son1, (stdsize[1], stdsize[0]))
+    stdson1 = stdson1.astype(np.float32) / 255.0
     datas['part1_data'][dataidx, 0] = stdson0[:, :, 0]
     datas['part1_data'][dataidx, 1] = stdson0[:, :, 1]
     datas['part1_data'][dataidx, 2] = stdson0[:, :, 2]
@@ -87,6 +91,40 @@ def get_pairs_data_label(data_infos, label_infos, datalist, data_rndidx, batch_n
     dataidx += 1
 
   return datas, labels
+
+
+def get_data_label_test(data_shape, datalist, which_car):
+  """
+  data_shape: (chn, h, w)
+  datalist: string list
+  which_car: query which car
+  """
+  query_line = datalist[which_car]
+  onecar = {}
+  parts = query_line.split(',')
+  onecar['path'] = parts[0]
+  onecar['sons'] = parts[1:]
+  num_sons = len(onecar['sons'])
+  parts2 = onecar['path'].split('/')
+  onecar['id'] = parts2[-1]
+  stdsize = data_shape[1:]
+#  print data_shape, stdsize
+  carinfo = {}
+  carinfo['id'] = onecar['id']
+  carinfo['sons'] = []
+  for si in xrange(num_sons):
+    queryone = onecar['sons'][si]
+    tmppath = onecar['path'] + '/' + queryone
+    sonimg = cv2.imread(tmppath)  
+    stdson = cv2.resize(sonimg, (stdsize[1], stdsize[0]))
+    stdson = stdson.astype(np.float32) / 255.0
+    stdson_tmp = np.zeros((3,)+stdsize, dtype=np.float32)
+    stdson_tmp[0] = stdson[:, :, 0]
+    stdson_tmp[1] = stdson[:, :, 1]
+    stdson_tmp[2] = stdson[:, :, 2]
+    carinfo['sons'].append(stdson_tmp)
+  
+  return carinfo
 
 
 def get_pairs_data_label_rnd(data_infos, label_infos):

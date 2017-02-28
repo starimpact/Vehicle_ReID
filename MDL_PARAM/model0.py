@@ -133,11 +133,8 @@ def CreateModel_Color_pre():
     
     hybrid_score = fc_sub_score + fc_mul_score
 
-    label = mx.sym.Variable('label')
-    cost = mx.sym.log(1.0 + mx.sym.exp(-label*hybrid_score)) 
-    reid_net = mx.sym.MakeLoss(data=cost, name='reid_loss')
-       
-    return reid_net 
+     
+    return hybrid_score 
 
 
 def CreateModel_Color(ctxdev, batchsize, imgsize):
@@ -145,7 +142,10 @@ def CreateModel_Color(ctxdev, batchsize, imgsize):
     
     imgchnum = 3
     
-    reid_net = CreateModel_Color_pre()
+    hybrid_score = CreateModel_Color_pre()
+    label = mx.sym.Variable('label')
+    cost = mx.sym.log(1.0 + mx.sym.exp(-label*hybrid_score)) 
+    reid_net = mx.sym.MakeLoss(data=cost, name='reid_loss')
     
     if False:
         reid_net_exec = reid_net.simple_bind(ctx=ctxdev, part1_data=(batchsize, imgchnum, imgh, imgw), 
@@ -187,6 +187,30 @@ def CreateModel_Color(ctxdev, batchsize, imgsize):
         print "predict time rpn:%.2f ms"%((t1-t0)*1000/tnum/batchsize)
 
     return reid_net 
+
+
+def CreateModel_Color_Test(ctxdev, batchsize, imgsize):
+    imgh, imgw = imgsize
+    
+    reid_net_test = CreateModel_Color_pre()
+
+    if False:
+        reid_net_exec = reid_net.simple_bind(ctx=ctxdev, part1_data=(batchsize, imgchnum, imgh, imgw), 
+                                             part2_data=(batchsize, imgchnum, imgh, imgw), grad_req='null')
+        reid_net_args = reid_net_exec.arg_dict
+        reid_net_aux = reid_net_exec.aux_dict
+        
+        print 'args, grads, length:', len(reid_net_args), len(reid_net_aux)
+        
+        print 'reid_net_args'
+        for key in reid_net_args:
+           print key, reid_net_args[key].asnumpy().shape
+   
+        print 'reid_net_aux'
+        for key in reid_net_aux:
+           print key, reid_net_aux[key].asnumpy().shape
+
+    return reid_net_test 
 
 
 if __name__=="__main__":    

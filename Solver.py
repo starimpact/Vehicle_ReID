@@ -74,6 +74,10 @@ class CarReID_Solver(object):
       self.arg_params[name][:] = update_params[name]
     for name in self.aux_params:
       self.aux_params[name][:] = aux_params[name]
+#    name = 'PART2_COV_5_bn_moving_mean'
+#    print name, aux_params[name].asnumpy()
+#    exit()
+    return
 
   def fit(self, train_data, grad_req='write', showperiod=100, whichone=None, logger=None):
     if logger is not None:
@@ -127,6 +131,8 @@ class CarReID_Solver(object):
 #          print argdict['bn_5_gamma'].asnumpy(), argdict['bn_5_beta'].asnumpy()
 #          print argdict['fc_sub_weight'].asnumpy(), argdict['fc_sub_bias'].asnumpy()
 #          print argdict['fc_mul_weight'].asnumpy(), argdict['fc_mul_bias'].asnumpy()
+          name = 'PART2_COV_5_bn_moving_mean'
+          print name, self.aux_params[name].asnumpy()
           print num_update, 'cost:', np.mean(cost), 'lr:', nowlr, num_batches 
           cost = []
 #          epoch_end_callback(epoch, self.symbol, self.update_params, self.aux_params)

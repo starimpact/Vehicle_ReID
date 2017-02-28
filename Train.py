@@ -23,7 +23,7 @@ def Do_Train():
 
   reid_net = now_model.CreateModel_Color(ctx, batch_size, data_shape[2:])
   
-  dlr = 20000/batch_size
+  dlr = 40000/batch_size
 #  dlr_steps = [dlr, dlr*2, dlr*3, dlr*4]
   dlr_steps = [dlr*i for i in xrange(1, 80)]
   print dlr_steps
@@ -34,7 +34,7 @@ def Do_Train():
                     momentum=0.9, wd=0.0005, learning_rate=0.0001, lr_scheduler=lr_scheduler)
 
   print 'fitting...'
-  resotre_whichone = 1
+  resotre_whichone = None
   solver.fit(data_train, showperiod=100, whichone=resotre_whichone, logger=logger) 
   print 'over...'
 
