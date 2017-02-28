@@ -58,28 +58,29 @@ class CarReID_Predictor(object):
     # begin training
     data_query.reset()
     for dquery in data_query:
-      data1 = dquery['sons'][0]
+#      datainfo1 = dquery['sons'][0]
       id1 = dquery['id']
-      data1 = data1.reshape((1,)+data1.shape)
-      cmpfile = open('Result/cmp_%s_0.list'%(id1), 'w')
-#      d1s = np.mean(data1)
-#      print data1.shape, self.arg_params['part1_data'].asnumpy().shape
-      self.arg_params['part1_data'][:] = mx.nd.array(data1, self.ctx)
-      data_set.reset()
-      for dset in data_set:
-        id2 = dset['id']
-        for si, data2 in enumerate(dset['sons']):
-          data2 = data2.reshape((1,)+data2.shape)
-  #        d2s = np.mean(data2)
-          self.arg_params['part2_data'][:] = mx.nd.array(data2, self.ctx)
-  
-          self.executor.forward(is_train=False)
-          cmp_score = self.executor.outputs[0].asnumpy()[0, 0]
-          cmpfile.write('%s,%d,%f\n'%(id2, si, cmp_score)) 
-          cmpfile.flush()
-  #        print 'query:%s,%.3f,%d; dset:%s,%.3f,%d; %.3f'%(id1, d1s, data_query.cur_idx, id2, d2s, data_set.cur_idx, cmp_score)
-          print 'query:%s,%d; dset:%s,%d; %.3f'%(id1, data_query.cur_idx, id2, data_set.cur_idx, cmp_score)
-      cmpfile.close()
+      for datainfo1 in dquery['sons']:
+        data1 = datainfo1['data'].reshape((1,)+datainfo1['data'].shape)
+        cmpfile = open('Result/cmp=%s=%s.list'%(id1, datainfo1['name']), 'w')
+  #      d1s = np.mean(data1)
+  #      print data1.shape, self.arg_params['part1_data'].asnumpy().shape
+        self.arg_params['part1_data'][:] = mx.nd.array(data1, self.ctx)
+        data_set.reset()
+        for dset in data_set:
+          id2 = dset['id']
+          for datainfo2 in dset['sons']:
+            data2 = datainfo2['data'].reshape((1,)+datainfo2['data'].shape)
+    #        d2s = np.mean(data2)
+            self.arg_params['part2_data'][:] = mx.nd.array(data2, self.ctx)
+    
+            self.executor.forward(is_train=False)
+            cmp_score = self.executor.outputs[0].asnumpy()[0, 0]
+            cmpfile.write('%s,%s,%f\n'%(id2, datainfo2['name'], cmp_score)) 
+            cmpfile.flush()
+    #        print 'query:%s,%.3f,%d; dset:%s,%.3f,%d; %.3f'%(id1, d1s, data_query.cur_idx, id2, d2s, data_set.cur_idx, cmp_score)
+            print 'query:%s,%d; dset:%s,%d; %.3f'%(id1, data_query.cur_idx, id2, data_set.cur_idx, cmp_score)
+        cmpfile.close()
 #       exit()
 
 

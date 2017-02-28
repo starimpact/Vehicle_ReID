@@ -25,17 +25,17 @@ def top20(fn):
 def get_all_top(folder):
   qcars_list = []
   for qcar in os.listdir(folder):
-    fname = qcar.split('.')[0]
+    fname = qcar.split('.list')[0]
     if qcar.endswith('list') is False:
       continue 
-    parts = fname.split('_')
+    parts = fname.split('=')
 #    print qcar, parts
     qcarinfo = {}
     qcarinfo['id'] = parts[1]
     qcarinfo['name'] = parts[2]
     top_20 = top20(folder+'/'+qcar)
     qcarinfo['data'] = top_20
-    print qcarinfo
+#    print qcarinfo
     qcars_list.append(qcarinfo) 
   return qcars_list
 
@@ -59,20 +59,35 @@ def get_rightrate(qcar_list):
             break
       idx+=1
     toprate_num[useds]+=1 
-  print toprate_num 
+  qnum = len(qcar_list)
+  toprate = toprate_num / qnum
+  return toprate
     
 
+def get_rightrate_each(qcar_list):
+  no_plate = []
+  has_plate = []
+  for car in qcar_list:
+    if car['name'].find('noplate')>=0:
+      no_plate.append(car)
+    else:
+      has_plate.append(car) 
+  tr0 = get_rightrate(has_plate)
+  print 'has_plate:', tr0
+  tr1 = get_rightrate(no_plate)
+  print 'no_plate:', tr1
 
 if __name__=='__main__':
-  if False:
+  if True:
     folder = 'Result'
     qcar_list = get_all_top(folder)
     cPickle.dump(qcar_list, open('top20.bin', 'wb'))
   if True:
-    qcar_list = cPickle.load(open('top20.bin', 'rb'))
-    get_rightrate(qcar_list)
-
-
+    qcar_list = cPickle.load(open('top20_200.bin', 'rb'))
+    tr = get_rightrate(qcar_list)
+    print 'all_car:', tr
+    get_rightrate_each(qcar_list)
+ 
 
 
 

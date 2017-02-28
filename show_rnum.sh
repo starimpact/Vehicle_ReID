@@ -1,0 +1,1 @@
+ls Result | wc -l

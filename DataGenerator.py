@@ -122,7 +122,10 @@ def get_data_label_test(data_shape, datalist, which_car):
     stdson_tmp[0] = stdson[:, :, 0]
     stdson_tmp[1] = stdson[:, :, 1]
     stdson_tmp[2] = stdson[:, :, 2]
-    carinfo['sons'].append(stdson_tmp)
+    soninfo = {}
+    soninfo['name'] = queryone
+    soninfo['data'] = stdson_tmp
+    carinfo['sons'].append(soninfo)
   
   return carinfo
 

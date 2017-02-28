@@ -21,7 +21,8 @@ def Do_Test():
   data_query = CarReID_Test_Iter(['part1_data'], [data_shape], data_query_fn)
  # data_set_fn = '/home/mingzhang/data/car_ReID_for_zhangming/test/cam_1.list'
 #  data_set_fn = '/home/mingzhang/data/car_ReID_for_zhangming/test/cam_1.1w.list'
-  data_set_fn = '/home/mingzhang/data/car_ReID_for_zhangming/test/cam_1.1k.list'
+#  data_set_fn = '/home/mingzhang/data/car_ReID_for_zhangming/test/cam_1.1k.list'
+  data_set_fn = '/home/mingzhang/data/car_ReID_for_zhangming/test/cam_1.200.list'
   data_set = CarReID_Test_Iter(['part2_data'], [data_shape], data_set_fn)
   data_set = CarReID_Test_Iter(['part2_data'], [data_shape], data_set_fn)
 
@@ -33,7 +34,7 @@ def Do_Test():
   predictor = CarReID_Predictor(param_prefix, reid_net, ctx, data_shape)
 
   print 'Testing...'
-  resotre_whichone = 43 
+  resotre_whichone = 6 
   predictor.predict(data_query, data_set, whichone=resotre_whichone, logger=logger) 
   print 'over...'
 
