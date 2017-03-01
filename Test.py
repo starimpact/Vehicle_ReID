@@ -43,6 +43,8 @@ def Do_Test():
 def Do_Feature_Test(restore):
   print 'Extracting feature...'
 
+  fdir = '/home/mingzhang/data/car_ReID_for_zhangming/test_train'
+
   # set up logger
   logger = logging.getLogger()
   logger.setLevel(logging.INFO)
@@ -50,12 +52,12 @@ def Do_Feature_Test(restore):
   ctx = mx.gpu(1)
 
   data_shape = (1, 3, 256, 256)
-  data_query_fn = '/home/mingzhang/data/car_ReID_for_zhangming/test/cam_0.list'
+  data_query_fn = fdir + '/cam_0.list'
   data_query = CarReID_Test_Iter(['part1_data'], [data_shape], data_query_fn)
-  data_set_fn = '/home/mingzhang/data/car_ReID_for_zhangming/test/cam_1.list'
-#  data_set_fn = '/home/mingzhang/data/car_ReID_for_zhangming/test/cam_1.1w.list'
-#  data_set_fn = '/home/mingzhang/data/car_ReID_for_zhangming/test/cam_1.1k.list'
-#  data_set_fn = '/home/mingzhang/data/car_ReID_for_zhangming/test/cam_1.200.list'
+  data_set_fn = fdir + '/cam_1.list'
+#  data_set_fn = fdir + '/cam_1.1w.list'
+  data_set_fn = fdir + '/cam_1.2k.list'
+#  data_set_fn = fdir + '/cam_1.200.list'
   data_set = CarReID_Test_Iter(['part1_data'], [data_shape], data_set_fn)
 
   batch_size = data_shape[0]
@@ -67,9 +69,9 @@ def Do_Feature_Test(restore):
 
   print 'Extracting feature...'
   resotre_whichone = restore 
-  feat_savepath = '/home/mingzhang/data/car_ReID_for_zhangming/test/cam_feat_0'
+  feat_savepath = fdir + '/cam_feat_0'
   predictor_feature.predict(data_query, feat_savepath, whichone=resotre_whichone, logger=logger) 
-  feat_savepath = '/home/mingzhang/data/car_ReID_for_zhangming/test/cam_feat_1'
+  feat_savepath = fdir + '/cam_feat_1'
   predictor_feature.predict(data_set, feat_savepath, whichone=resotre_whichone, logger=logger) 
 
   print 'over...'
@@ -80,6 +82,7 @@ def Do_Feature_Test(restore):
 def Do_Compare_Test(restore):
   print 'Comparing feature...'
 
+  fdir = '/home/mingzhang/data/car_ReID_for_zhangming/test_train'
   # set up logger
   logger = logging.getLogger()
   logger.setLevel(logging.INFO)
@@ -87,11 +90,12 @@ def Do_Compare_Test(restore):
   ctx = mx.gpu(1)
 
   data_shape = (1, 16384)
-  data_query_fn = '/home/mingzhang/data/car_ReID_for_zhangming/test/cam_feat_0.list'
+  data_query_fn = fdir+'/cam_feat_0.list'
   data_query = CarReID_Feat_Iter(['feature1_data'], [data_shape], data_query_fn)
-  data_set_fn = '/home/mingzhang/data/car_ReID_for_zhangming/test/cam_feat_1.list'
-  data_set_fn = '/home/mingzhang/data/car_ReID_for_zhangming/test/cam_feat_1.1w.list'
-  data_set_fn = '/home/mingzhang/data/car_ReID_for_zhangming/test/cam_feat_1.1k.list'
+  data_set_fn = fdir+'/cam_feat_1.list'
+  data_set_fn = fdir+'/cam_feat_1.1w.list'
+  data_set_fn = fdir+'/cam_feat_1.2k.list'
+  data_set_fn = fdir+'/cam_feat_1.1k.list'
   data_set = CarReID_Feat_Iter(['feature1_data'], [data_shape], data_set_fn)
 
   batch_size = data_shape[0]
@@ -113,8 +117,8 @@ def Do_Compare_Test(restore):
 
 if __name__=='__main__':
 #  Do_Test()
-  restore_whichone = 15
-#  Do_Feature_Test(restore_whichone)
+  restore_whichone = 23
+  Do_Feature_Test(restore_whichone)
   Do_Compare_Test(restore_whichone)
 
 
