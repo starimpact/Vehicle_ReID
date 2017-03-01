@@ -1,5 +1,6 @@
 import numpy as np
 import cv2
+import cPickle
 
 datafn = '/media/data1/mzhang/data/car_ReID_for_zhangming/data/data.list'
 
@@ -128,6 +129,39 @@ def get_data_label_test(data_shape, datalist, which_car):
     carinfo['sons'].append(soninfo)
   
   return carinfo
+
+
+def get_feature_label_test(data_shape, datalist, which_car):
+  """
+  data_shape: (chn, h, w)
+  datalist: string list
+  which_car: query which car
+  """
+  query_line = datalist[which_car]
+  onecar = {}
+  parts = query_line.split(',')
+  onecar['path'] = parts[0]
+  onecar['sons'] = parts[1:]
+  num_sons = len(onecar['sons'])
+  parts2 = onecar['path'].split('/')
+  onecar['id'] = parts2[-1]
+  stdsize = data_shape[1:]
+#  print data_shape, stdsize
+  carinfo = {}
+  carinfo['id'] = onecar['id']
+  carinfo['sons'] = []
+  for si in xrange(num_sons):
+    queryone = onecar['sons'][si]
+    tmppath = onecar['path'] + '/' + queryone
+    sonfeat = cPickle.load(open(tmppath, 'rb'))
+    soninfo = {}
+    soninfo['name'] = queryone
+    soninfo['data'] = sonfeat.reshape(data_shape)
+    carinfo['sons'].append(soninfo)
+  
+  return carinfo
+
+
 
 
 def get_pairs_data_label_rnd(data_infos, label_infos):

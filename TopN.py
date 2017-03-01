@@ -83,7 +83,7 @@ if __name__=='__main__':
     qcar_list = get_all_top(folder)
     cPickle.dump(qcar_list, open('top20.bin', 'wb'))
   if True:
-    qcar_list = cPickle.load(open('top20_200.bin', 'rb'))
+    qcar_list = cPickle.load(open('top20_1000.bin', 'rb'))
     tr = get_rightrate(qcar_list)
     print 'all_car:', tr
     get_rightrate_each(qcar_list)

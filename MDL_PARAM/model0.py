@@ -213,6 +213,70 @@ def CreateModel_Color_Test(ctxdev, batchsize, imgsize):
     return reid_net_test 
 
 
+
+def CreateModel_Color_Split_test():
+    print 'CreateModel Color Split...'
+
+    layers_desc = (
+                  ('COV', ((3, 3), 32), ((3, 3), (2, 2), 'max'), True),
+                  ('COV', ((3, 3), 64), ((3, 3), (2, 2), 'max'), True), 
+                  ('COV', ((3, 3), 128), ((3, 3), (2, 2), 'max'), True), 
+                  ('COV', ((3, 3), 256), ((3, 3), (2, 2), 'max'), True), 
+                  ('COV', ((3, 3), 512), ((3, 3), (2, 2), 'max'), True), 
+                  ('COV', ((3, 3), 1024), ((3, 3), (2, 2), 'max'), True), 
+                  )
+
+    layernum = len(layers_desc)
+
+    layer_params = [] 
+    for i in xrange(layernum):
+        now_desc = layers_desc[i]
+        if now_desc[0] == 'COV':
+            layerp = [{'weight':mx.sym.Variable('conv_' + str(i) + '_weight'), 
+                       'bias':mx.sym.Variable('conv_' + str(i) + '_bias')}]
+            if now_desc[-1]:
+                layerp += [{'gamma':mx.sym.Variable('bn_' + str(i) + '_gamma'),
+                            'beta':mx.sym.Variable('bn_' + str(i) + '_beta'),
+                            'movingmean':mx.sym.Variable('bn_' + str(i) + '_movingmean'),
+                            'movingvar':mx.sym.Variable('bn_' + str(i) + '_movingvar')}]
+        layer_params.append(layerp)
+     
+    # input 1
+    data1 = mx.sym.Variable('part1_data')
+    datapre = data1
+    convlayers1 = []
+    nkerns1 = []
+    numfilter_pre = 0
+    for i in xrange(layernum):
+        now_desc = layers_desc[i]
+        if now_desc[0] == 'COV':
+            layerp = layer_params[i]
+            conv_p = now_desc[1]
+            pool_p = now_desc[2]
+            layernow = BN_MP_Conv(inputdata=datapre, kernelsize=conv_p[0], numfilter=conv_p[1], conv_params=layerp[0], 
+                                  poolkernel=pool_p[0], poolstride=pool_p[1], pooltype=pool_p[2], act_type='relu', 
+                                  bn_params=layerp[1], name='PART1_COV_' + str(i))
+            numfilter_pre = conv_p[1]
+        datapre = layernow
+        nkerns1.append(numfilter_pre)
+        convlayers1.append(layernow)
+    reid_feature = mx.symbol.Flatten(data=convlayers1[-1], name="flatten1") 
+     
+    # combine
+    feature1 = mx.sym.Variable('feature1_data')
+    feature2 = mx.sym.Variable('feature2_data')
+
+    metric_sub = mx.sym.abs(feature1 - feature2)
+    fc_sub_score = mx.sym.FullyConnected(data=metric_sub, num_hidden=1, name='fc_sub')
+    metric_mul = feature1 * feature2
+    fc_mul_score = mx.sym.FullyConnected(data=metric_mul, num_hidden=1, name='fc_mul')
+    
+    hybrid_score = fc_sub_score + fc_mul_score
+     
+    return reid_feature, hybrid_score 
+
+
+
 if __name__=="__main__":    
     ctxdev = mx.cpu(0)
     stdsize = (128, 128)

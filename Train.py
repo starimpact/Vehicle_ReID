@@ -34,7 +34,7 @@ def Do_Train():
                     momentum=0.9, wd=0.0005, learning_rate=0.0001, lr_scheduler=lr_scheduler)
 
   print 'fitting...'
-  resotre_whichone = 51
+  resotre_whichone = 111
   solver.fit(data_train, showperiod=100, whichone=resotre_whichone, logger=logger) 
   print 'over...'
 
