@@ -126,17 +126,10 @@ class CarReID_Solver(object):
         nowlr = lrsch.base_lr
         num_update = self.optimizer.num_update
         if num_update % showperiod == 0:
-#          argdict = self.arg_params
-#          argdict = self.grad_params
-#          print argdict['bn_5_gamma'].asnumpy(), argdict['bn_5_beta'].asnumpy()
-#          print argdict['fc_sub_weight'].asnumpy(), argdict['fc_sub_bias'].asnumpy()
-#          print argdict['fc_mul_weight'].asnumpy(), argdict['fc_mul_bias'].asnumpy()
-          name = 'PART2_COV_5_bn_moving_mean'
-          print name, self.aux_params[name].asnumpy()
           print num_update, 'cost:', np.mean(cost), 'lr:', nowlr, num_batches 
           cost = []
 #          epoch_end_callback(epoch, self.symbol, self.update_params, self.aux_params)
-          savefunc(self.prefix, epoch, self.symbol, self.update_params, self.aux_params)
+          savefunc(self.prefix, epoch%10, self.symbol, self.update_params, self.aux_params)
 #          print databatch.label['label'].T
 
 
