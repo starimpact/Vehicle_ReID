@@ -131,7 +131,7 @@ def get_data_label_test(data_shape, datalist, which_car):
   return carinfo
 
 
-def get_feature_label_test(data_shape, datalist, which_car):
+def get_feature_label_test__(data_shape, datalist, which_car):
   """
   data_shape: (chn, h, w)
   datalist: string list
@@ -162,6 +162,54 @@ def get_feature_label_test(data_shape, datalist, which_car):
   return carinfo
 
 
+def get_feature_label_query_test(data_shape, datalist, which_idx):
+  """
+  data_shape: (batch, chn, h, w)
+  datalist: string list
+  which_idx: query a batch 
+  """
+  batchsize = data_shape[0]
+  query_line = datalist[which_idx]
+  batch_info = {'paths':[], 'ids':[], 'names':[], 'data':np.zeros(data_shape, dtype=np.float32)}
+  for qli in xrange(batchsize):
+    parts = query_line.split(',')
+    pathpre = parts[0]
+    namenow = parts[1]
+    pathnow = pathpre + '/' + namenow
+    parts2 = pathpre.split('/')
+    idnow = parts2[-1]
+    featnow = cPickle.load(open(pathnow, 'rb'))
+    batch_info['data'][qli] = featnow[0]
+    batch_info['paths'].append(pathnow)
+    batch_info['ids'].append(idnow)
+    batch_info['names'].append(namenow)
+  
+  return batch_info
+
+
+def get_feature_label_test(data_shape, datalist, which_batch):
+  """
+  data_shape: (batch, chn, h, w)
+  datalist: string list
+  which_batch: query a batch 
+  """
+  batchsize = data_shape[0]
+  query_batch = datalist[which_batch*batchsize:(which_batch+1)*batchsize]
+  batch_info = {'paths':[], 'ids':[], 'names':[], 'data':np.zeros(data_shape, dtype=np.float32)}
+  for qli, query_line in enumerate(query_batch):
+    parts = query_line.split(',')
+    pathpre = parts[0]
+    namenow = parts[1]
+    pathnow = pathpre + '/' + namenow
+    parts2 = pathpre.split('/')
+    idnow = parts2[-1]
+    featnow = cPickle.load(open(pathnow, 'rb'))
+    batch_info['data'][qli] = featnow[0]
+    batch_info['paths'].append(pathnow)
+    batch_info['ids'].append(idnow)
+    batch_info['names'].append(namenow)
+  
+  return batch_info
 
 
 def get_pairs_data_label_rnd(data_infos, label_infos):

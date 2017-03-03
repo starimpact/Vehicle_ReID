@@ -30,8 +30,11 @@ def Do_Train():
   lr_scheduler = mx.lr_scheduler.MultiFactorScheduler(dlr_steps, 0.9)
 #  lr_scheduler = mx.lr_scheduler.FactorScheduler(dlr, 0.9)
   param_prefix = 'MDL_PARAM/params2/car_reid'
+#  solver = CarReID_Solver(param_prefix, reid_net, ctx, data_shape, label_shape, num_epoch, 
+#                    momentum=0.9, wd=0.0005, learning_rate=0.001, lr_scheduler=lr_scheduler)
   solver = CarReID_Solver(param_prefix, reid_net, ctx, data_shape, label_shape, num_epoch, 
-                    momentum=0.9, wd=0.0005, learning_rate=0.001, lr_scheduler=lr_scheduler)
+                    opt_method='adam', wd=0.0005, learning_rate=0.0001, lr_scheduler=lr_scheduler)
+
 
   print 'fitting...'
   resotre_whichone = None

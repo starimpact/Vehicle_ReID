@@ -48,6 +48,9 @@ class CarReID_Iter(mx.io.DataIter):
       raise StopIteration
 
 
+
+
+
 class CarReID_Test_Iter(mx.io.DataIter):
   def __init__(self, data_name, data_shape, datafn):
     super(CarReID_Test_Iter, self).__init__()
@@ -80,14 +83,16 @@ class CarReID_Test_Iter(mx.io.DataIter):
       raise StopIteration
 
 
-class CarReID_Feat_Iter(mx.io.DataIter):
+class CarReID_Feat_Query_Iter(mx.io.DataIter):
   def __init__(self, data_name, data_shape, datafn):
-    super(CarReID_Feat_Iter, self).__init__()
+    super(CarReID_Feat_Query_Iter, self).__init__()
 
     self._provide_data = zip(data_name, data_shape)
     self.cur_idx = 0
     self.datalist = dg.get_datalist(datafn)
     self.datalen = len(self.datalist)
+    self.batchsize = data_shape[0][0]
+    self.batchnum = self.datalen
 
   def __iter__(self):
     return self
@@ -103,9 +108,44 @@ class CarReID_Feat_Iter(mx.io.DataIter):
     return self._provide_data
 
   def next(self):
-    if self.cur_idx < self.datalen:
+    if self.cur_idx < self.batchnum:
 #      print self._provide_data
-      carinfo = dg.get_feature_label_test(self._provide_data[0][1][1:], self.datalist, self.cur_idx) 
+      carinfo = dg.get_feature_label_query_test(self._provide_data[0][1], self.datalist, self.cur_idx) 
+      self.cur_idx += 1
+      return carinfo 
+    else:
+      raise StopIteration
+
+
+
+class CarReID_Feat_Iter(mx.io.DataIter):
+  def __init__(self, data_name, data_shape, datafn):
+    super(CarReID_Feat_Iter, self).__init__()
+
+    self._provide_data = zip(data_name, data_shape)
+    self.cur_idx = 0
+    self.datalist = dg.get_datalist(datafn)
+    self.datalen = len(self.datalist)
+    self.batchsize = data_shape[0][0]
+    self.batchnum = self.datalen / self.batchsize
+
+  def __iter__(self):
+    return self
+
+  def reset(self):
+    self.cur_idx = 0
+
+  def __next__(self):
+    return self.next()
+
+  @property
+  def provide_data(self):
+    return self._provide_data
+
+  def next(self):
+    if self.cur_idx < self.batchnum:
+#      print self._provide_data
+      carinfo = dg.get_feature_label_test(self._provide_data[0][1], self.datalist, self.cur_idx) 
       self.cur_idx += 1
       return carinfo 
     else:

@@ -3,6 +3,7 @@ import mxnet as mx
 import numpy as np
 import cPickle
 import os
+import time
 
 
 class CarReID_Predictor(object):
@@ -153,6 +154,85 @@ class CarReID_Feature_Predictor(object):
 
 
 class CarReID_Compare_Predictor(object):
+  def __init__(self, prefix='', symbol=None, ctx=None, data_shape=None):
+    self.prefix = prefix
+    self.symbol = symbol
+    self.ctx = ctx
+    if self.ctx is None:
+      self.ctx = mx.cpu() 
+    self.data_shape = data_shape
+    self.batchsize = data_shape[0]
+    self.arg_params = None
+    self.aux_params = None
+    self.executor = None
+
+  def get_params(self):
+    arg_names = self.symbol.list_arguments()
+    arg_shapes, _, aux_shapes = \
+                self.symbol.infer_shape(feature1_data=self.data_shape,
+                                        feature2_data=self.data_shape)
+
+    self.arg_params = {}
+    for name, shape in zip(arg_names, arg_shapes):
+      self.arg_params[name] = mx.nd.zeros(shape, self.ctx)
+
+    aux_names = self.symbol.list_auxiliary_states()
+    self.aux_params = {k: mx.nd.zeros(s, self.ctx) for k, s in zip(aux_names, aux_shapes)}
+
+  def set_params(self, whichone):
+    logging.info('loading checkpoint from %s-->%d...', self.prefix, whichone)
+    loadfunc = mx.model.load_checkpoint
+    _, update_params, aux_params = loadfunc(self.prefix, whichone)
+    for name in self.arg_params:
+      if name.endswith('weight') or name.endswith('bias') or name.endswith('gamma') or name.endswith('beta'):
+        self.arg_params[name][:] = update_params[name]
+#      print update_params[name].asnumpy()
+    for name in self.aux_params:
+      if name.endswith('moving_var') or name.endswith('moving_mean'):
+        self.aux_params[name][:] = aux_params[name]   
+#        print name, aux_params[name].asnumpy()
+#    exit()
+    return
+
+  def predict(self, data_query, data_set, whichone=None, logger=None):
+    if logger is not None:
+      logger.info('Start Comparing with %s', str(self.ctx))
+
+    self.get_params()
+    if whichone is not None:
+      self.set_params(whichone)
+    self.executor = self.symbol.bind(ctx=self.ctx, args=self.arg_params, grad_req='null', aux_states=self.aux_params)
+
+    data_query.reset()
+    for dquery in data_query:
+      id1 = dquery['ids'][0]
+      data1 = dquery['data']
+      cmpfile = open('Result/cmp=%s=%s.list'%(id1, dquery['names'][0]), 'w')
+      self.arg_params['feature1_data'][:] = mx.nd.array(data1, self.ctx)
+      data_set.reset()
+      t0 = time.time()
+      for dset in data_set:
+        id2s = dset['ids']
+        data2 = dset['data']
+        self.arg_params['feature2_data'][:] = mx.nd.array(data2, self.ctx)
+        self.executor.forward(is_train=False)
+        cmp_scores = self.executor.outputs[0].asnumpy()
+        writestrs = ''
+        for bi in xrange(data_set.batchsize):
+          id2 = id2s[bi]
+          onename = dset['names'][bi]
+          cmp_score = cmp_scores[bi]
+          writestrs += '%s,%s,%f\n'%(id2, onename, cmp_score)
+#          print 'query:%s,%d; dset:%s,%d; %.3f'%(id1, data_query.cur_idx, id2, data_set.cur_idx*data_set.batchsize+bi, cmp_score)
+        cmpfile.write(writestrs) 
+        cmpfile.flush()
+      cmpfile.close()
+      t1 = time.time()
+      print '%s, %d->time cost:%.3f s'%(id1, data_query.cur_idx, (t1-t0))
+
+
+
+class CarReID_Compare_Predictor__(object):
   def __init__(self, prefix='', symbol=None, ctx=None, data_shape=None):
     self.prefix = prefix
     self.symbol = symbol

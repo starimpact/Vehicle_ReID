@@ -2,7 +2,7 @@ import logging
 import numpy as np
 import mxnet as mx
 
-from DataIter import CarReID_Iter, CarReID_Test_Iter, CarReID_Feat_Iter
+from DataIter import CarReID_Iter, CarReID_Test_Iter, CarReID_Feat_Query_Iter, CarReID_Feat_Iter
 from Solver import CarReID_Solver
 from Predictor import CarReID_Predictor, CarReID_Feature_Predictor, CarReID_Compare_Predictor
 from MDL_PARAM import model0 as now_model
@@ -40,7 +40,7 @@ def Do_Test():
   return 
 
 
-def Do_Feature_Test(restore):
+def Do_Feature_Test(restore, ctx=mx.cpu()):
   print 'Extracting feature...'
 
   fdir = '/home/mingzhang/data/car_ReID_for_zhangming/test_train'
@@ -49,7 +49,6 @@ def Do_Feature_Test(restore):
   logger = logging.getLogger()
   logger.setLevel(logging.INFO)
   
-  ctx = mx.gpu(1)
 
   data_shape = (1, 3, 256, 256)
   data_query_fn = fdir + '/cam_0.list'
@@ -79,7 +78,7 @@ def Do_Feature_Test(restore):
   return
 
 
-def Do_Compare_Test(restore):
+def Do_Compare_Test(restore, ctx=mx.cpu()):
   print 'Comparing feature...'
 
   fdir = '/home/mingzhang/data/car_ReID_for_zhangming/test_train'
@@ -87,16 +86,15 @@ def Do_Compare_Test(restore):
   logger = logging.getLogger()
   logger.setLevel(logging.INFO)
   
-  ctx = mx.gpu(1)
 
-  data_shape = (1, 16384)
+  data_shape = (1000, 16384)
   data_query_fn = fdir+'/cam_feat_0.list'
-  data_query = CarReID_Feat_Iter(['feature1_data'], [data_shape], data_query_fn)
+  data_query = CarReID_Feat_Query_Iter(['feature1_data'], [data_shape], data_query_fn)
   data_set_fn = fdir+'/cam_feat_1.list'
   data_set_fn = fdir+'/cam_feat_1.1w.list'
-  data_set_fn = fdir+'/cam_feat_1.2k.list'
-  data_set_fn = fdir+'/cam_feat_1.1k.list'
-  data_set = CarReID_Feat_Iter(['feature1_data'], [data_shape], data_set_fn)
+#  data_set_fn = fdir+'/cam_feat_1.2k.list'
+#  data_set_fn = fdir+'/cam_feat_1.1k.list'
+  data_set = CarReID_Feat_Iter(['feature2_data'], [data_shape], data_set_fn)
 
   batch_size = data_shape[0]
   _, reid_cmp_net = now_model.CreateModel_Color_Split_test()
@@ -118,7 +116,8 @@ def Do_Compare_Test(restore):
 if __name__=='__main__':
 #  Do_Test()
   restore_whichone = 23
-  Do_Feature_Test(restore_whichone)
-  Do_Compare_Test(restore_whichone)
+  ctx = mx.gpu(0)
+#  Do_Feature_Test(restore_whichone, ctx)
+  Do_Compare_Test(restore_whichone, ctx)
 
 
