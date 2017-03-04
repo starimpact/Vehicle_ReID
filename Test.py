@@ -5,7 +5,7 @@ import mxnet as mx
 from DataIter import CarReID_Iter, CarReID_Test_Iter, CarReID_Feat_Query_Iter, CarReID_Feat_Iter
 from Solver import CarReID_Solver
 from Predictor import CarReID_Predictor, CarReID_Feature_Predictor, CarReID_Compare_Predictor
-from MDL_PARAM import model0 as now_model
+from MDL_PARAM import model2 as now_model
 
 def Do_Test():
   print 'Testing...'
@@ -44,6 +44,7 @@ def Do_Feature_Test(restore, ctx=mx.cpu()):
   print 'Extracting feature...'
 
   fdir = '/home/mingzhang/data/car_ReID_for_zhangming/test_train'
+  fdir = '/home/mingzhang/data/car_ReID_for_zhangming/test'
 
   # set up logger
   logger = logging.getLogger()
@@ -51,11 +52,12 @@ def Do_Feature_Test(restore, ctx=mx.cpu()):
   
 
   data_shape = (1, 3, 256, 256)
+  data_shape = (1, 3, 299, 299)
   data_query_fn = fdir + '/cam_0.list'
   data_query = CarReID_Test_Iter(['part1_data'], [data_shape], data_query_fn)
   data_set_fn = fdir + '/cam_1.list'
-#  data_set_fn = fdir + '/cam_1.1w.list'
-  data_set_fn = fdir + '/cam_1.2k.list'
+  data_set_fn = fdir + '/cam_1.1w.list'
+#  data_set_fn = fdir + '/cam_1.2k.list'
 #  data_set_fn = fdir + '/cam_1.200.list'
   data_set = CarReID_Test_Iter(['part1_data'], [data_shape], data_set_fn)
 
@@ -63,7 +65,7 @@ def Do_Feature_Test(restore, ctx=mx.cpu()):
   reid_feature_net, _ = now_model.CreateModel_Color_Split_test()
   
 #  lr_scheduler = mx.lr_scheduler.FactorScheduler(dlr, 0.9)
-  param_prefix = 'MDL_PARAM/params0/car_reid'
+  param_prefix = 'MDL_PARAM/params2/car_reid'
   predictor_feature = CarReID_Feature_Predictor(param_prefix, reid_feature_net, ctx, data_shape)
 
   print 'Extracting feature...'
@@ -82,12 +84,15 @@ def Do_Compare_Test(restore, ctx=mx.cpu()):
   print 'Comparing feature...'
 
   fdir = '/home/mingzhang/data/car_ReID_for_zhangming/test_train'
+  fdir = '/home/mingzhang/data/car_ReID_for_zhangming/test'
+
   # set up logger
   logger = logging.getLogger()
   logger.setLevel(logging.INFO)
   
 
-  data_shape = (1000, 16384)
+  data_shape = (1000, 16384) #model0
+  data_shape = (1000, 1536) #model2
   data_query_fn = fdir+'/cam_feat_0.list'
   data_query = CarReID_Feat_Query_Iter(['feature1_data'], [data_shape], data_query_fn)
   data_set_fn = fdir+'/cam_feat_1.list'
@@ -100,7 +105,7 @@ def Do_Compare_Test(restore, ctx=mx.cpu()):
   _, reid_cmp_net = now_model.CreateModel_Color_Split_test()
   
 #  lr_scheduler = mx.lr_scheduler.FactorScheduler(dlr, 0.9)
-  param_prefix = 'MDL_PARAM/params0/car_reid'
+  param_prefix = 'MDL_PARAM/params2/car_reid'
   predictor_compare = CarReID_Compare_Predictor(param_prefix, reid_cmp_net, ctx, data_shape)
 
   print 'Comparing...'
@@ -115,7 +120,7 @@ def Do_Compare_Test(restore, ctx=mx.cpu()):
 
 if __name__=='__main__':
 #  Do_Test()
-  restore_whichone = 23
+  restore_whichone = 9
   ctx = mx.gpu(0)
 #  Do_Feature_Test(restore_whichone, ctx)
   Do_Compare_Test(restore_whichone, ctx)

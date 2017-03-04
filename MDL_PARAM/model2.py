@@ -244,6 +244,26 @@ def CreateModel_Color(ctx, batch_size, imagesize):
   return reid_net 
 
 
+def CreateModel_Color_Split_test():
+  print "note: image size must be:(299, 299)"
+
+  data0 = mx.sym.Variable('part1_data')
+  args_all = None
+  reid_feature, args_all = create_inception_resnet_v2(data0, namepre='part1', args=args_all)
+#  print args_all
+
+  feature1 = mx.sym.Variable('feature1_data')
+  feature2 = mx.sym.Variable('feature2_data')
+
+  metric_sub = mx.sym.abs(feature1 - feature2)
+  fc_sub_score = mx.sym.FullyConnected(data=metric_sub, num_hidden=1, name='fc_sub')
+  metric_mul = feature1 * feature2
+  fc_mul_score = mx.sym.FullyConnected(data=metric_mul, num_hidden=1, name='fc_mul')
+  hybrid_score = fc_sub_score + fc_mul_score
+#  print args_all
+  return reid_feature, hybrid_score
+
+
 def draw_inception_renet_v2():
   reid_net = create_reid_net()
   #darw net
