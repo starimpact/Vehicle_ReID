@@ -3,7 +3,7 @@ import cPickle
 import cv2
 import draw
 
-def visualTopN(fn, qpath, mpath, savepath):
+def visualTopN(fn, qpath, mpath, savepath, showtopn=20):
   stdsize=(200, 200)
   topn = cPickle.load(open(fn, 'rb'))
   for onecar in topn:
@@ -16,7 +16,9 @@ def visualTopN(fn, qpath, mpath, savepath):
     qimg = draw.drawText_Color(qimg, car_id, (0, 0), 20, (0, 0, 255))
     allimg = qimg
 #    print car_id, car_name
+    idxnow = 0
     for mcar in car_topn:
+      idxnow+=1
       m_id = mcar['id']
       m_name = mcar['name'].split('.bin')[0]
       m_score = mcar['score']
@@ -26,6 +28,8 @@ def visualTopN(fn, qpath, mpath, savepath):
       txt = m_id + '(%.2f)'%(m_score)
       mimg = draw.drawText_Color(mimg, txt, (0, 0), 20, (0, 0, 255))
       allimg = np.append(allimg, mimg, axis=1) 
+      if idxnow>=showtopn:
+        break
 #      print m_id, m_name, m_score
     savefn = savepath+'/'+car_id+'='+car_name+'.result.jpg'
     print savefn
@@ -34,11 +38,12 @@ def visualTopN(fn, qpath, mpath, savepath):
       
 
 if __name__=='__main__':
-  topnfn = 'top20.bin'
+  topnfn = 'top20.test.bin'
   savepath = 'ImageResult'
-  father = '/home/mingzhang/data/car_ReID_for_zhangming/test_train'
+  father = '/home/mingzhang/data/car_ReID_for_zhangming/test'
   query_path = father + '/cam_0'
   match_path = father + '/cam_1'
-  visualTopN(topnfn, query_path, match_path, savepath)
+  showtopn = 10
+  visualTopN(topnfn, query_path, match_path, savepath, showtopn)
 
 

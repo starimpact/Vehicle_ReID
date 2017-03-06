@@ -5,7 +5,12 @@ import cPickle
 def mysort(car0, car1):
   return -cmp(car0['score'], car1['score'])
 
-def top20(fn):
+
+def mysort2(car0, car1):
+  return cmp(car0['score'], car1['score'])
+
+
+def top20(fn, descend=True):
   carlist = []
   for line in file(fn):
     line = line.replace('\n', '')
@@ -16,13 +21,16 @@ def top20(fn):
     car['score'] = float(parts[2])
     carlist.append(car)
 #  print len(carlist)
-  carlist.sort(mysort)
+  if descend:
+    carlist.sort(mysort)
+  else:
+    carlist.sort(mysort2)
 #  print carlist
 #  exit()
   top_20 = carlist[:20]
   return top_20
 
-def get_all_top(folder):
+def get_all_top(folder, descend=True):
   qcars_list = []
   for qcar in os.listdir(folder):
     fname = qcar.split('.list')[0]
@@ -33,7 +41,7 @@ def get_all_top(folder):
     qcarinfo = {}
     qcarinfo['id'] = parts[1]
     qcarinfo['name'] = parts[2]
-    top_20 = top20(folder+'/'+qcar)
+    top_20 = top20(folder+'/'+qcar, descend)
     qcarinfo['data'] = top_20
 #    print qcarinfo
     qcars_list.append(qcarinfo) 
@@ -80,10 +88,11 @@ def get_rightrate_each(qcar_list):
 if __name__=='__main__':
   if True:
     folder = 'Result'
-    qcar_list = get_all_top(folder)
-    cPickle.dump(qcar_list, open('top20.bin', 'wb'))
+#    qcar_list = get_all_top(folder, descend=True)
+    qcar_list = get_all_top(folder, descend=False)
+    cPickle.dump(qcar_list, open('top20.test.bin', 'wb'))
   if True:
-    qcar_list = cPickle.load(open('top20.bin', 'rb'))
+    qcar_list = cPickle.load(open('top20.test.bin', 'rb'))
     tr = get_rightrate(qcar_list)
     print 'all_car:', tr
     get_rightrate_each(qcar_list)

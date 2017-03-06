@@ -1,11 +1,11 @@
 import logging
 import numpy as np
 import mxnet as mx
-
-from DataIter import CarReID_Iter, CarReID_Test_Iter, CarReID_Feat_Query_Iter, CarReID_Feat_Iter
+ 
+from DataIter import CarReID_Iter, CarReID_Test_Iter, CarReID_Feat_Query_Iter, CarReID_Feat_Iter, CarReID_Softmax_Iter
 from Solver import CarReID_Solver
-from Predictor import CarReID_Predictor, CarReID_Feature_Predictor, CarReID_Compare_Predictor
-from MDL_PARAM import model2 as now_model
+from Predictor import CarReID_Predictor, CarReID_Feature_Predictor, CarReID_Compare_Predictor, CarReID_Softmax_Predictor
+from MDL_PARAM import model1_softmax as now_model
 
 def Do_Test():
   print 'Testing...'
@@ -52,7 +52,7 @@ def Do_Feature_Test(restore, ctx=mx.cpu()):
   
 
   data_shape = (1, 3, 256, 256)
-  data_shape = (1, 3, 299, 299)
+#  data_shape = (1, 3, 299, 299)
   data_query_fn = fdir + '/cam_0.list'
   data_query = CarReID_Test_Iter(['part1_data'], [data_shape], data_query_fn)
   data_set_fn = fdir + '/cam_1.list'
@@ -65,7 +65,7 @@ def Do_Feature_Test(restore, ctx=mx.cpu()):
   reid_feature_net, _ = now_model.CreateModel_Color_Split_test()
   
 #  lr_scheduler = mx.lr_scheduler.FactorScheduler(dlr, 0.9)
-  param_prefix = 'MDL_PARAM/params2/car_reid'
+  param_prefix = 'MDL_PARAM/params1_softmax/car_reid'
   predictor_feature = CarReID_Feature_Predictor(param_prefix, reid_feature_net, ctx, data_shape)
 
   print 'Extracting feature...'
@@ -93,6 +93,7 @@ def Do_Compare_Test(restore, ctx=mx.cpu()):
 
   data_shape = (1000, 16384) #model0
   data_shape = (1000, 1536) #model2
+  data_shape = (1000, 512) #model1_softmax
   data_query_fn = fdir+'/cam_feat_0.list'
   data_query = CarReID_Feat_Query_Iter(['feature1_data'], [data_shape], data_query_fn)
   data_set_fn = fdir+'/cam_feat_1.list'
@@ -105,7 +106,7 @@ def Do_Compare_Test(restore, ctx=mx.cpu()):
   _, reid_cmp_net = now_model.CreateModel_Color_Split_test()
   
 #  lr_scheduler = mx.lr_scheduler.FactorScheduler(dlr, 0.9)
-  param_prefix = 'MDL_PARAM/params2/car_reid'
+  param_prefix = 'MDL_PARAM/params1_softmax/car_reid'
   predictor_compare = CarReID_Compare_Predictor(param_prefix, reid_cmp_net, ctx, data_shape)
 
   print 'Comparing...'
@@ -117,12 +118,40 @@ def Do_Compare_Test(restore, ctx=mx.cpu()):
   return
 
 
+def Do_Softmax_Test_Acc(ctx, resotre_whichone):
+  print 'Softmax test accuracy...'
+
+  # set up logger
+  logger = logging.getLogger()
+  logger.setLevel(logging.INFO)
+
+  batch_size = 24
+  data_shape = (batch_size, 3, 256, 256)
+  label_shape = (batch_size, )
+  datafn = '/home/mingzhang/data/car_ReID_for_zhangming/data_each.list' #43928 calss number.
+#  datafn = '/home/mingzhang/data/car_ReID_for_zhangming/data_each.10.list'
+  data_train = CarReID_Softmax_Iter(['data'], [data_shape], ['label'], [label_shape], datafn)
+  clsnum=43928
+  reid_net = now_model.CreateModel_Color(ctx, batch_size, data_shape[2:], clsnum)
+  
+#  lr_scheduler = mx.lr_scheduler.FactorScheduler(dlr, 0.9)
+  param_prefix = 'MDL_PARAM/params1_softmax/car_reid'
+  predictor = CarReID_Softmax_Predictor(param_prefix, reid_net, ctx, data_shape)
+
+
+  print 'predicting...'
+  predictor.predict(data_train, showperiod=100, whichone=resotre_whichone, logger=logger) 
+  print 'over...'
+
+  return 
+
+
 
 if __name__=='__main__':
 #  Do_Test()
-  restore_whichone = 9
+  restore_whichone = 1
   ctx = mx.gpu(0)
+  Do_Softmax_Test_Acc(ctx, restore_whichone)
 #  Do_Feature_Test(restore_whichone, ctx)
-  Do_Compare_Test(restore_whichone, ctx)
-
+#  Do_Compare_Test(restore_whichone, ctx)
 

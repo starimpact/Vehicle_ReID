@@ -217,6 +217,9 @@ class CarReID_Compare_Predictor(object):
         self.arg_params['feature2_data'][:] = mx.nd.array(data2, self.ctx)
         self.executor.forward(is_train=False)
         cmp_scores = self.executor.outputs[0].asnumpy()
+        if True:
+          cmp_scores = np.sum(cmp_scores, axis=1)
+#          print data2, cmp_scores
         writestrs = ''
         for bi in xrange(data_set.batchsize):
           id2 = id2s[bi]
@@ -230,6 +233,96 @@ class CarReID_Compare_Predictor(object):
       t1 = time.time()
       print '%s, %d->time cost:%.3f s'%(id1, data_query.cur_idx, (t1-t0))
 
+
+class CarReID_Softmax_Predictor(object):
+  def __init__(self, prefix='', symbol=None, ctx=None, data_shape=None):
+    self.prefix = prefix
+    self.symbol = symbol
+    self.ctx = ctx
+    if self.ctx is None:
+        self.ctx = mx.cpu()
+    self.data_shape = data_shape
+    self.batchsize = data_shape[0]
+    self.arg_params = None
+    self.aux_params = None
+    self.executor = None
+
+  def init_args(self, args):
+    for key in args:
+      arr = args[key]
+      if key.endswith('_weight'):
+        self.initializer(key, arr)
+      if key.endswith('_bias'):
+        arr[:] = 0.0
+      if key.endswith('_gamma'):
+        arr[:] = 1.0
+      if key.endswith('_beta'):
+        arr[:] = 0.0
+      if key.endswith('_init_c'):
+        arr[:] = 0.0
+      if key.endswith('_init_h'):
+        arr[:] = 0.0
+
+  def get_params(self):
+    arg_names = self.symbol.list_arguments()
+    arg_shapes, _, aux_shapes = \
+                self.symbol.infer_shape(data=self.data_shape)
+
+    self.arg_params = {}
+    for name, shape in zip(arg_names, arg_shapes):
+      self.arg_params[name] = mx.nd.zeros(shape, self.ctx)
+
+    aux_names = self.symbol.list_auxiliary_states()
+    self.aux_params = {k: mx.nd.zeros(s, self.ctx) for k, s in zip(aux_names, aux_shapes)}
+
+  def set_params(self, whichone):
+    logging.info('loading checkpoint from %s-->%d...', self.prefix, whichone)
+    loadfunc = mx.model.load_checkpoint
+    _, update_params, aux_params = loadfunc(self.prefix, whichone)
+    for name in update_params:
+      self.arg_params[name][:] = update_params[name]
+#      print update_params[name].asnumpy()
+    for name in aux_params:
+      self.aux_params[name][:] = aux_params[name]   
+#      print name, aux_params[name].asnumpy()
+#    exit()
+    return
+
+
+  def predict(self, train_data, showperiod=100, whichone=None, logger=None):
+    if logger is not None:
+      logger.info('Start softmax predicting with %s', str(self.ctx))
+
+    savefunc = mx.model.save_checkpoint
+
+    self.get_params()
+    if whichone is not None:
+      self.set_params(whichone)
+    self.executor = self.symbol.bind(self.ctx, self.arg_params, grad_req='null', aux_states=self.aux_params)
+#    epoch_end_callback = mx.callback.do_checkpoint(self.prefix)
+    # begin training
+    accus = []
+    train_data.reset()
+    num_batches = train_data.num_batches
+    num_update = 0
+    for databatch in train_data:
+      num_update += 1
+      for k, v in databatch.data.items():
+        self.arg_params[k][:] = mx.nd.array(v, self.ctx)
+      for k, v in databatch.label.items():
+        self.arg_params[k][:] = mx.nd.array(v, self.ctx)
+      output_dict = {name: nd for name, nd in zip(self.symbol.list_outputs(), self.executor.outputs)}
+      self.executor.forward(is_train=False)
+
+      outval = output_dict['cls_output'].asnumpy()
+      label = databatch.label['label']
+      cls_predict = np.argmax(outval, axis=1)
+      accone = np.mean(cls_predict!=label)
+      accus.append(accone)
+
+      if num_update % showperiod == 0:
+        print num_update, 'errate_accu:', np.mean(accus)
+        accus = []
 
 
 class CarReID_Compare_Predictor__(object):
