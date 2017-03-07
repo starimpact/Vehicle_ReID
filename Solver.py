@@ -2,6 +2,33 @@ import logging
 import mxnet as mx
 import numpy as np
 
+def save_checkpoint(prefix, epoch, symbol, arg_params, aux_params):
+    """Checkpoint the model data into file.
+
+    Parameters
+    ----------
+    prefix : str
+        Prefix of model name.
+    epoch : int
+        The epoch number of the model.
+    symbol : Symbol
+        The input symbol
+    arg_params : dict of str to NDArray
+        Model parameter, dict of name to NDArray of net's weights.
+    aux_params : dict of str to NDArray
+        Model parameter, dict of name to NDArray of net's auxiliary states.
+    Notes
+    -----
+    - ``prefix-symbol.json`` will be saved for symbol.
+    - ``prefix-epoch.params`` will be saved for parameters.
+    """
+    symbol.save('%s-symbol.json' % prefix)
+    save_dict = {('arg:%s' % k) : v.copyto(mx.cpu()) for k, v in arg_params.items()}
+    save_dict.update({('aux:%s' % k) : v.copyto(mx.cpu()) for k, v in aux_params.items()})
+    param_name = '%s-%04d.params' % (prefix, epoch)
+    mx.nd.save(param_name, save_dict)
+    logging.info('Saved checkpoint to (ctx=cpu) \"%s\"', param_name)
+
 
 class CarReID_Solver(object):
   def __init__(self, prefix='', symbol=None, ctx=None, data_shape=None, label_shape=None,
@@ -83,7 +110,7 @@ class CarReID_Solver(object):
     if logger is not None:
       logger.info('Start training with %s', str(self.ctx))
 
-    savefunc = mx.model.save_checkpoint
+    savefunc = save_checkpoint
 
     self.get_params(grad_req)
     if whichone is not None:
@@ -212,7 +239,7 @@ class CarReID_Softmax_Solver(object):
     if logger is not None:
       logger.info('Start training with %s', str(self.ctx))
 
-    savefunc = mx.model.save_checkpoint
+    savefunc = save_checkpoint
 
     self.get_params(grad_req)
     if whichone is not None:

@@ -56,7 +56,7 @@ def Do_Feature_Test(restore, ctx=mx.cpu()):
   data_query_fn = fdir + '/cam_0.list'
   data_query = CarReID_Test_Iter(['part1_data'], [data_shape], data_query_fn)
   data_set_fn = fdir + '/cam_1.list'
-  data_set_fn = fdir + '/cam_1.1w.list'
+#  data_set_fn = fdir + '/cam_1.1w.list'
 #  data_set_fn = fdir + '/cam_1.2k.list'
 #  data_set_fn = fdir + '/cam_1.200.list'
   data_set = CarReID_Test_Iter(['part1_data'], [data_shape], data_set_fn)
@@ -97,7 +97,7 @@ def Do_Compare_Test(restore, ctx=mx.cpu()):
   data_query_fn = fdir+'/cam_feat_0.list'
   data_query = CarReID_Feat_Query_Iter(['feature1_data'], [data_shape], data_query_fn)
   data_set_fn = fdir+'/cam_feat_1.list'
-  data_set_fn = fdir+'/cam_feat_1.1w.list'
+#  data_set_fn = fdir+'/cam_feat_1.1w.list'
 #  data_set_fn = fdir+'/cam_feat_1.2k.list'
 #  data_set_fn = fdir+'/cam_feat_1.1k.list'
   data_set = CarReID_Feat_Iter(['feature2_data'], [data_shape], data_set_fn)
@@ -125,7 +125,7 @@ def Do_Softmax_Test_Acc(ctx, resotre_whichone):
   logger = logging.getLogger()
   logger.setLevel(logging.INFO)
 
-  batch_size = 24
+  batch_size = 10
   data_shape = (batch_size, 3, 256, 256)
   label_shape = (batch_size, )
   datafn = '/home/mingzhang/data/car_ReID_for_zhangming/data_each.list' #43928 calss number.
@@ -140,7 +140,8 @@ def Do_Softmax_Test_Acc(ctx, resotre_whichone):
 
 
   print 'predicting...'
-  predictor.predict(data_train, showperiod=100, whichone=resotre_whichone, logger=logger) 
+  showp = 100
+  predictor.predict(data_train, showperiod=showp, whichone=resotre_whichone, logger=logger) 
   print 'over...'
 
   return 
@@ -149,9 +150,10 @@ def Do_Softmax_Test_Acc(ctx, resotre_whichone):
 
 if __name__=='__main__':
 #  Do_Test()
-  restore_whichone = 1
+  restore_whichone = 0
   ctx = mx.gpu(0)
-  Do_Softmax_Test_Acc(ctx, restore_whichone)
-#  Do_Feature_Test(restore_whichone, ctx)
-#  Do_Compare_Test(restore_whichone, ctx)
+#  Do_Softmax_Test_Acc(ctx, restore_whichone)
+  Do_Feature_Test(restore_whichone, ctx)
+  Do_Compare_Test(restore_whichone, ctx)
+
 

@@ -228,7 +228,8 @@ def get_pairs_data_label_rnd(data_infos, label_infos):
   return datas, labels
 
 
-def get_data_label(data_infos, label_infos, datalist, data_rndidx, batch_now):
+def get_data_label(data_infos, label_infos, datalist, data_rndidx, batch_now, 
+                   rndcrop=True, rndcont=True, rndnoise=True):
 #  print label_infos
   labelshape = label_infos[0][1]
   batchsize = labelshape[0]
@@ -262,17 +263,49 @@ def get_data_label(data_infos, label_infos, datalist, data_rndidx, batch_now):
     carson = onecar['son']
     tmpath = carpath+'/'+carson
     son = cv2.imread(tmpath)
+    if rndcrop:
+      son = get_rnd_crop(son)
 #    print 0, tmpath, son0.shape, stdsize
     stdson = cv2.resize(son, (stdsize[1], stdsize[0]))
     stdson = stdson.astype(np.float32) / 255.0
+    if rndcont:
+      stdson = get_rnd_contrast(stdson)
+    if rndnoise:
+      stdson = get_rnd_noise(stdson)
 #    print carid, stdson
     datas['data'][si, 0] = stdson[:, :, 0]
     datas['data'][si, 1] = stdson[:, :, 1]
     datas['data'][si, 2] = stdson[:, :, 2]
     labels['label'][si] = carid
-#    cv2.imwrite('tmpimg/stdson%d.jpg'%(int(carid)), stdson)
+    if False:
+      imgsave = (stdson*255).astype(np.uint8)
+      cv2.imwrite('tmpimg/stdson%d.jpg'%(int(carid)), imgsave)
 
   return datas, labels
+
+
+def get_rnd_crop(img):
+  imgh, imgw = img.shape[:2]
+  rndmg = np.random.randint(0, 10, 4)/100.0
+  mgs = [imgh*rndmg[0], imgh*rndmg[1], imgw*rndmg[2], imgw*rndmg[3]]
+  cropimg = img[mgs[0]:imgh-mgs[1], mgs[2]:imgw-mgs[3]]
+  return cropimg
+
+
+def get_rnd_contrast(img):
+  rndv = np.random.randint(75, 100)/100.0
+  img *= rndv
+
+  return img
+
+def get_rnd_noise(img):
+  rndv = np.random.randint(1, 20) / 1000.0
+  gauss = np.random.normal(0, rndv, img.shape)
+  img += gauss
+  img[img<0] = 0
+  img[img>1.0] = 1.0
+
+  return img
 
 
 
