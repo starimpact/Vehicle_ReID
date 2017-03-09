@@ -2,6 +2,7 @@ import numpy as np
 import cPickle
 import cv2
 import draw
+import os
 
 def visualTopN(fn, qpath, mpath, savepath, showtopn=20):
   stdsize=(200, 200)
@@ -31,7 +32,16 @@ def visualTopN(fn, qpath, mpath, savepath, showtopn=20):
       if idxnow>=showtopn:
         break
 #      print m_id, m_name, m_score
-    savefn = savepath+'/'+car_id+'='+car_name+'.result.jpg'
+    if car_id==car_topn[0]['id']:
+      savefn = savepath+'/right/'
+      if not os.path.exists(savefn):
+        os.makedirs(savefn)
+      savefn += car_id+'='+car_name+'.result.jpg'
+    else:
+      savefn = savepath+'/wrong/'
+      if not os.path.exists(savefn):
+        os.makedirs(savefn)
+      savefn += car_id+'='+car_name+'.result.jpg'
     print savefn
     cv2.imwrite(savefn, allimg)
   print 'visualization is over ...'

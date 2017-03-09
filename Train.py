@@ -72,13 +72,13 @@ def Do_Softmax_Train():
 #  lr_scheduler = mx.lr_scheduler.FactorScheduler(dlr, 0.9)
   param_prefix = 'MDL_PARAM/params1_softmax/car_reid'
   solver = CarReID_Softmax_Solver(param_prefix, reid_net, ctx, data_shape, label_shape, num_epoch, 
-                    momentum=0.9, wd=0.0005, learning_rate=0.0001, lr_scheduler=lr_scheduler)
+                    momentum=0.9, wd=0.0005, learning_rate=0.0002, lr_scheduler=lr_scheduler)
 #  solver = CarReID_Softmax_Solver(param_prefix, reid_net, ctx, data_shape, label_shape, num_epoch, 
 #                    opt_method='rmsprop', wd=0.0005, learning_rate=0.01, lr_scheduler=lr_scheduler)
 
 
   print 'fitting...'
-  resotre_whichone = 3
+  resotre_whichone = 0
   solver.fit(data_train, showperiod=100, whichone=resotre_whichone, logger=logger) 
   print 'over...'
 

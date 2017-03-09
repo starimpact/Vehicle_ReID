@@ -229,7 +229,8 @@ def get_pairs_data_label_rnd(data_infos, label_infos):
 
 
 def get_data_label(data_infos, label_infos, datalist, data_rndidx, batch_now, 
-                   rndcrop=True, rndcont=True, rndnoise=True):
+                   rndcrop=True, rndcont=True, rndnoise=False, rndrotate=False,
+                   rndhflip=True):
 #  print label_infos
   labelshape = label_infos[0][1]
   batchsize = labelshape[0]
@@ -272,6 +273,10 @@ def get_data_label(data_infos, label_infos, datalist, data_rndidx, batch_now,
       stdson = get_rnd_contrast(stdson)
     if rndnoise:
       stdson = get_rnd_noise(stdson)
+    if rndrotate:
+      stdson = get_rnd_rotate(stdson)
+    if rndhflip:
+      stdson = get_rnd_hflip(stdson)
 #    print carid, stdson
     datas['data'][si, 0] = stdson[:, :, 0]
     datas['data'][si, 1] = stdson[:, :, 1]
@@ -306,6 +311,25 @@ def get_rnd_noise(img):
   img[img>1.0] = 1.0
 
   return img
+
+
+def get_rnd_rotate(img):
+  imgh, imgw = img.shape[:2]
+  rndv = np.random.randint(-30, 30)#*3.1415/180
+#  print rndv
+  rotmat = cv2.getRotationMatrix2D((imgw/2, imgh/2), rndv, 1.0)
+  rotimg = cv2.warpAffine(img, rotmat, (imgw, imgh))
+
+  return rotimg
+
+
+def get_rnd_hflip(img):
+  rndv = np.random.rand()
+  hfimg = img
+  if rndv<0.5:
+    hfimg = img[:, ::-1]
+
+  return hfimg
 
 
 

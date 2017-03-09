@@ -200,16 +200,16 @@ def create_inception_resnet_v2(data, namepre='', args=None):
 
   reduceA, args['reductionA'] = reductionA(stem_net, namepre=namepre+'_reductionA', args=args['reductionA'])
 
-  repeat_block35, args['repeat_block35'] = repeat(reduceA, 2, block35, scale=0.17, input_num_channels=320, namepre=namepre+'_repeat_block35', args=args['repeat_block35'])
+  repeat_block35, args['repeat_block35'] = repeat(reduceA, 1, block35, scale=0.17, input_num_channels=320, namepre=namepre+'_repeat_block35', args=args['repeat_block35'])
 
 
   reduceB, args['reductionB'] = reductionB(repeat_block35, namepre=namepre+'_reductionB', args=args['reductionB'])
 
-  repeat_block17, args['repeat_block17'] = repeat(reduceB, 4, block17, scale=0.1, input_num_channels=1088, namepre=namepre+'_repeat_block17', args=args['repeat_block17'])
+  repeat_block17, args['repeat_block17'] = repeat(reduceB, 2, block17, scale=0.1, input_num_channels=1088, namepre=namepre+'_repeat_block17', args=args['repeat_block17'])
 
   reduceC, args['reductionC'] = reductionC(repeat_block17, namepre=namepre+'_reductionC', args=args['reductionC'])
 
-  repeat_block8, args['repeat_block8'] = repeat(reduceC, 2, block8, scale=0.2, input_num_channels=2080, namepre=namepre+'_repeat_block8', args=args['repeat_block8'])
+  repeat_block8, args['repeat_block8'] = repeat(reduceC, 1, block8, scale=0.2, input_num_channels=2080, namepre=namepre+'_repeat_block8', args=args['repeat_block8'])
   final_block8, args['final_block8'] = block8(repeat_block8, with_act=False, input_num_channels=2080, namepre=namepre+'_final_block8', args=args['final_block8'])
 
   final_conv, args['final_conv'] = ConvFactory(final_block8, 1536, (1, 1), namepre=namepre+'_final_conv', args=args['final_conv'])
@@ -223,7 +223,7 @@ def create_inception_resnet_v2(data, namepre='', args=None):
     args['finalfc']['weight'] = mx.sym.Variable(namepre+'_fc1_weight')
     args['finalfc']['bias'] = mx.sym.Variable(namepre+'_fc1_bias')
     
-  reid_fc1 = mx.sym.FullyConnected(data=drop1, num_hidden=512, name=namepre+"_fc1", 
+  reid_fc1 = mx.sym.FullyConnected(data=drop1, num_hidden=256, name=namepre+"_fc1", 
                                    weight=args['finalfc']['weight'], bias=args['finalfc']['bias']) 
   reid_act = mx.sym.Activation(data=reid_fc1, act_type='relu', name=namepre+'_fc1_relu')
 
@@ -265,7 +265,7 @@ def draw_inception_renet_v2():
 def CreateModel_Color_Split_test():
    data1 = mx.sym.Variable('part1_data')
    args_all = None
-   reid_feature, args_all = create_inception_resnet_v2(data0, namepre='part1', args=args_all)
+   reid_feature, args_all = create_inception_resnet_v2(data1, namepre='part1', args=args_all)
 
    feature1 = mx.sym.Variable('feature1_data')
    feature2 = mx.sym.Variable('feature2_data')
