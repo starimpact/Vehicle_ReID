@@ -94,7 +94,8 @@ def get_pairs_data_label(data_infos, label_infos, datalist, data_rndidx, batch_n
   return datas, labels
 
 
-def get_data_label_test(data_shape, datalist, which_car):
+def get_data_label_test(data_shape, datalist, which_car
+                        , normalize=True):
   """
   data_shape: (chn, h, w)
   datalist: string list
@@ -119,6 +120,8 @@ def get_data_label_test(data_shape, datalist, which_car):
     sonimg = cv2.imread(tmppath)  
     stdson = cv2.resize(sonimg, (stdsize[1], stdsize[0]))
     stdson = stdson.astype(np.float32) / 255.0
+    if normalize:
+      stdson = get_normalization(stdson)
     stdson_tmp = np.zeros((3,)+stdsize, dtype=np.float32)
     stdson_tmp[0] = stdson[:, :, 0]
     stdson_tmp[1] = stdson[:, :, 1]
@@ -229,8 +232,8 @@ def get_pairs_data_label_rnd(data_infos, label_infos):
 
 
 def get_data_label(data_infos, label_infos, datalist, data_rndidx, batch_now, 
-                   rndcrop=True, rndcont=True, rndnoise=False, rndrotate=False,
-                   rndhflip=True):
+                   rndcrop=True, rndcont=False, rndnoise=False, rndrotate=True,
+                   rndhflip=True, normalize=True):
 #  print label_infos
   labelshape = label_infos[0][1]
   batchsize = labelshape[0]
@@ -273,6 +276,8 @@ def get_data_label(data_infos, label_infos, datalist, data_rndidx, batch_now,
       stdson = get_rnd_contrast(stdson)
     if rndnoise:
       stdson = get_rnd_noise(stdson)
+    if normalize:
+      stdson = get_normalization(stdson)
     if rndrotate:
       stdson = get_rnd_rotate(stdson)
     if rndhflip:
@@ -330,6 +335,22 @@ def get_rnd_hflip(img):
     hfimg = img[:, ::-1]
 
   return hfimg
+
+
+def get_normalization_rgb(img):
+  mean = img.mean(axis=(0, 1))
+  std = img.std(axis=(0, 1))
+  nimg = (img-mean)/std
+
+  return nimg
+
+
+def get_normalization(img):
+  mean = img.mean()
+  std = img.std()
+  nimg = (img-mean)/std
+
+  return nimg
 
 
 

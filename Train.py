@@ -51,7 +51,7 @@ def Do_Softmax_Train():
   logger = logging.getLogger()
   logger.setLevel(logging.INFO)
   
-  ctx = mx.gpu(1)
+  ctx = mx.gpu(0)
 
   num_epoch = 10000
   batch_size = 32
@@ -64,12 +64,12 @@ def Do_Softmax_Train():
   clsnum=43928
   reid_net = softmax_model.CreateModel_Color(ctx, batch_size, data_shape[2:], clsnum)
   
-  dlr = 700000/batch_size
+  dlr = 1000000/batch_size
 #  dlr_steps = [dlr, dlr*2, dlr*3, dlr*4]
-  lr_start = 10**-5
-  lr_min = 10**-6
+  lr_start = 10**-3
+  lr_min = 10**-5
   lr_reduce = 0.1
-  lr_stepnum = np.log(lr_min/lr_start)/np.log(0.1)
+  lr_stepnum = np.log(lr_min/lr_start)/np.log(lr_reduce)
   lr_stepnum = np.int(np.ceil(lr_stepnum))
   dlr_steps = [dlr*i for i in xrange(1, lr_stepnum+1)]
   print 'lr_start:%.1e, lr_min:%.1e, lr_reduce:%.2f, lr_stepsnum:%d'%(lr_start, lr_min, lr_reduce, lr_stepnum)
@@ -77,14 +77,14 @@ def Do_Softmax_Train():
   lr_scheduler = mx.lr_scheduler.MultiFactorScheduler(dlr_steps, lr_reduce)
 #  lr_scheduler = mx.lr_scheduler.FactorScheduler(dlr, 0.9)
   param_prefix = 'MDL_PARAM/params2_softmax/car_reid'
-#  solver = CarReID_Softmax_Solver(param_prefix, reid_net, ctx, data_shape, label_shape, num_epoch, 
-#                    momentum=0.9, wd=0.0005, learning_rate=0.01, lr_scheduler=lr_scheduler)
   solver = CarReID_Softmax_Solver(param_prefix, reid_net, ctx, data_shape, label_shape, num_epoch, 
-                    opt_method='rmsprop', wd=0.0005, learning_rate=lr_start, lr_scheduler=lr_scheduler)
+                    momentum=0.9, wd=0.0005, learning_rate=lr_start, lr_scheduler=lr_scheduler)
+#  solver = CarReID_Softmax_Solver(param_prefix, reid_net, ctx, data_shape, label_shape, num_epoch, 
+#                    opt_method='rmsprop', wd=0.0005, learning_rate=lr_start, lr_scheduler=lr_scheduler)
 
 
   print 'fitting...'
-  resotre_whichone = 6
+  resotre_whichone = 1 
   solver.fit(data_train, showperiod=100, whichone=resotre_whichone, logger=logger) 
   print 'over...'
 
