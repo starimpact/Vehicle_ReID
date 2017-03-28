@@ -1,6 +1,7 @@
 import numpy as np
 import cv2
 import cPickle
+import os
 
 datafn = '/media/data1/mzhang/data/car_ReID_for_zhangming/data/data.list'
 
@@ -14,6 +15,22 @@ def get_datalist(datafn):
   datafile.close()
   
   return datalist
+
+
+def get_proxyset(proxyfn, proxyshape):
+  proxy_set = []
+  if os.path.isfile(proxyfn):
+    print 'loading proxy set from ', proxyfn
+    proxy_set = cPickle.load(open(proxyfn, 'rb'))
+    assert(proxy_set.shape==proxyshape)
+    return proxy_set
+
+  print 'creating proxy set to ', proxyfn
+  p = np.random.rand(proxyshape[0], proxyshape[1], dtype=np.float32)  
+  pn = np.sqrt(np.sum(p*p, axis=1))
+  proxy_set = p / pn
+  cPickle.dump(proxy_set, open(proxyfn, 'wb'));
+  return proxy_set
 
 
 def get_pairs_data_label(data_infos, label_infos, datalist, data_rndidx, batch_now):
@@ -292,6 +309,75 @@ def get_data_label(data_infos, label_infos, datalist, data_rndidx, batch_now,
       cv2.imwrite('tmpimg/stdson%d.jpg'%(int(carid)), imgsave)
 
   return datas, labels
+
+
+def get_data_label_proxy(data_infos, label_infos, datalist, data_rndidx, proxyset, batch_now, 
+                   rndcrop=True, rndcont=False, rndnoise=False, rndrotate=True,
+                   rndhflip=True, normalize=True):
+#  print label_infos
+  labelshape = label_infos[0][1]
+  batchsize = labelshape[0]
+  if (batch_now+1)*batchsize > len(datalist):
+    return None
+  
+  data_batch = []
+  for idx in data_rndidx[batch_now*batchsize:(batch_now+1)*batchsize]:
+    data_batch.append(datalist[idx])
+  cars = []
+  for onedata in data_batch:
+    onecar = {}
+    parts = onedata.split(',')
+    onecar['path'] = parts[0]
+    onecar['id'] = parts[0].split('/')[-1]
+#    print onecar['id']
+    onecar['son'] = parts[1]
+    cars.append(onecar)
+
+  stdsize = data_infos[0][1][2:]
+  dataidx = 0
+  datas = {}
+  labels = {}
+  datas['data'] = np.zeros(data_infos[0][1], dtype=np.float32)
+  labels['proxy_y'] = np.zeros(label_infos[0][1], dtype=np.float32)
+  labels['proxy_Z'] = np.zeros(label_infos[1][1], dtype=np.float32)
+  labels['proxy_M'] = np.ones(label_infos[2][1], dtype=np.float32)
+  #ready same data
+  for si in xrange(batchsize):
+    onecar = cars[si]
+    carpath = onecar['path']
+    carid = int(onecar['id'])
+    carson = onecar['son']
+    tmpath = carpath+'/'+carson
+    son = cv2.imread(tmpath)
+    if rndcrop:
+      son = get_rnd_crop(son)
+#    print 0, tmpath, son0.shape, stdsize
+    stdson = cv2.resize(son, (stdsize[1], stdsize[0]))
+    stdson = stdson.astype(np.float32) / 255.0
+    if rndcont:
+      stdson = get_rnd_contrast(stdson)
+    if rndnoise:
+      stdson = get_rnd_noise(stdson)
+    if normalize:
+      stdson = get_normalization(stdson)
+    if rndrotate:
+      stdson = get_rnd_rotate(stdson)
+    if rndhflip:
+      stdson = get_rnd_hflip(stdson)
+#    print carid, stdson
+    datas['data'][si, 0] = stdson[:, :, 0]
+    datas['data'][si, 1] = stdson[:, :, 1]
+    datas['data'][si, 2] = stdson[:, :, 2]
+    labels['proxy_y'][si] = proxyset[carid]
+    labels['proxy_Z'][:] = proxyset
+    labels['proxy_M'][si, carid] = 0
+    if False:
+      imgsave = (stdson*255).astype(np.uint8)
+      cv2.imwrite('tmpimg/stdson%d.jpg'%(int(carid)), imgsave)
+
+  return datas, labels
+
+
 
 
 def get_rnd_crop(img):
