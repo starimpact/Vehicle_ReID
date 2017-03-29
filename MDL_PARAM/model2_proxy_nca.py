@@ -225,7 +225,7 @@ def create_inception_resnet_v2(data, namepre='', args=None):
     
   reid_fc1 = mx.sym.FullyConnected(data=drop1, num_hidden=256, name=namepre+"_fc1", 
                                    weight=args['finalfc']['weight'], bias=args['finalfc']['bias']) 
-  reid_act = mx.sym.Activation(data=reid_fc1, act_type='relu', name=namepre+'_fc1_relu')
+  reid_act = mx.sym.Activation(data=reid_fc1, act_type='tanh', name=namepre+'_fc1_relu')
 
   net = reid_act
 
@@ -245,26 +245,37 @@ def create_reid_net(batch_size, proxy_num):
   proxy_ys = mx.sym.SliceChannel(proxy_y, axis=0, num_outputs=batch_size, name='proxy_y_slice')
   proxy_Ms = mx.sym.SliceChannel(proxy_M, axis=0, num_outputs=batch_size, name='proxy_M_slice')
   proxy_ncas = []
+  min_value = 10**-16
   for bi in xrange(batch_size):
     one_feat = features[bi]
+    one_feat_norm = mx.sym.sqrt(mx.sym.sum(one_feat**2))
+    one_feat_norm = mx.sym.Reshape(one_feat_norm, shape=(-2, 1))
+    one_feat = mx.sym.broadcast_div(one_feat, one_feat_norm)
+    
     one_proxy_y = proxy_ys[bi]
     one_proxy_M = proxy_Ms[bi]
     z = mx.sym.broadcast_minus(one_feat, proxy_Z)
     z = mx.sym.square(z)
+    z = mx.sym.sum_axis(z, axis=1)
+    z = -z
     tM = mx.sym.Reshape(one_proxy_M, shape=(-1,))
-    z = mx.sym.sum_axis(z, axis=1) * tM
-    z = mx.sym.exp(-z)
-    z = mx.sym.sum(z)/proxy_num
+    z = mx.sym.exp(z) * tM
+#    z = mx.sym.sum(z)/proxy_num + 0.000001
+    z = mx.sym.sum(z) + min_value 
 
     y = one_feat - one_proxy_y
-    y = mx.sym.sum_axis(y * y, axis=1)
-    y = mx.sym.exp(-y)
+    y = mx.sym.square(y)
+    y = mx.sym.sum(y)
+    y = -y
+    y = mx.sym.exp(y) + min_value
     one_proxy_nca = -mx.sym.log(y/z)
     
     proxy_ncas.append(one_proxy_nca)
 
   proxy_nca = mx.sym.Concat(*proxy_ncas, dim=0)
-  reid_net = mx.sym.sum(proxy_nca)/batch_size 
+  reid_net = mx.sym.sum(proxy_nca) 
+#  reid_net = proxy_nca
+  reid_net  = mx.sym.MakeLoss(reid_net, name='proxy_nca_loss')
 
 #  print args_all
   return reid_net

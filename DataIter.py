@@ -194,7 +194,7 @@ class CarReID_Softmax_Iter(mx.io.DataIter):
 
 class CarReID_Proxy_Iter(mx.io.DataIter):
   def __init__(self, data_names, data_shapes, label_names, label_shapes, datafn, proxyfn):
-    super(CarReID_Softmax_Iter, self).__init__()
+    super(CarReID_Proxy_Iter, self).__init__()
 
     self._provide_data = zip(data_names, data_shapes)
     self._provide_label = zip(label_names, label_shapes)

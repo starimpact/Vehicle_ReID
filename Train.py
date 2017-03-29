@@ -103,13 +103,14 @@ def Do_Proxy_NCA_Train():
   
   num_epoch = 10000
   batch_size = 32
-  featsize = 256
+  featdim = 256
   proxy_num = 43928
   clsnum = proxy_num
   data_shape = (batch_size, 3, 299, 299)
   proxy_y_shape = (batch_size, featdim)
   proxy_Z_shape = (proxy_num, featdim)
   proxy_M_shape = (batch_size, proxy_num)
+  label_shape = dict(zip(['proxy_y', 'proxy_Z', 'proxy_M'], [proxy_y_shape, proxy_Z_shape, proxy_M_shape]))
   proxyfn = 'proxy.bin'
   datafn = '/home/mingzhang/data/car_ReID_for_zhangming/data_each.list' #43928 calss number.
 #  datafn = '/home/mingzhang/data/car_ReID_for_zhangming/data_each.10.list'
@@ -118,8 +119,8 @@ def Do_Proxy_NCA_Train():
   
   dlr = 1000000/batch_size
 #  dlr_steps = [dlr, dlr*2, dlr*3, dlr*4]
-  lr_start = 10**-3
-  lr_min = 10**-5
+  lr_start = 10**-2
+  lr_min = 10**-6
   lr_reduce = 0.1
   lr_stepnum = np.log(lr_min/lr_start)/np.log(lr_reduce)
   lr_stepnum = np.int(np.ceil(lr_stepnum))
@@ -130,14 +131,14 @@ def Do_Proxy_NCA_Train():
 #  lr_scheduler = mx.lr_scheduler.FactorScheduler(dlr, 0.9)
   param_prefix = 'MDL_PARAM/params2_proxy_nca/car_reid'
   solver = CarReID_Proxy_Solver(param_prefix, reid_net, ctx, data_shape, label_shape, num_epoch, 
-                    momentum=0.9, wd=0.0005, learning_rate=lr_start, lr_scheduler=lr_scheduler)
+                    momentum=0.0, wd=0.0000, learning_rate=lr_start, lr_scheduler=lr_scheduler)
 #  solver = CarReID_Softmax_Solver(param_prefix, reid_net, ctx, data_shape, label_shape, num_epoch, 
 #                    opt_method='rmsprop', wd=0.0005, learning_rate=lr_start, lr_scheduler=lr_scheduler)
 
 
   print 'fitting...'
-  resotre_whichone = 1 
-  solver.fit(data_train, showperiod=100, whichone=resotre_whichone, logger=logger) 
+  resotre_whichone = None 
+  solver.fit(data_train, showperiod=10, whichone=resotre_whichone, logger=logger) 
   print 'over...'
 
   return 

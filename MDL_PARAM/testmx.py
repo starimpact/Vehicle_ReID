@@ -12,14 +12,15 @@ def test():
   c = mx.sym.broadcast_minus(a, b)
   c = mx.sym.sum_axis(c, axis=1)
   bs = mx.sym.SliceChannel(b, axis=0, num_outputs=4)
-  cs = mx.sym.Group([c, bs[0]])
+#  cs = mx.sym.Group([c, bs[0]])
+  cs = mx.sym.minimum(c, -10000)#mx.sym.sum(c)
   c_exe = cs.bind(ctx=mx.cpu(), args={'a':mx.nd.ones(ashape), 'b':mx.nd.ones(bshape)})
   args = c_exe.arg_dict
   args['a'][:] = mx.nd.array(np.random.rand(*ashape))
  
   c_exe.forward()
   print c_exe.outputs[0].asnumpy()
-  print c_exe.outputs[1].asnumpy().shape
+#  print c_exe.outputs[1].asnumpy().shape
 
 
 if __name__=='__main__':

@@ -348,11 +348,12 @@ class CarReID_Proxy_Solver(object):
     arg_names = self.symbol.list_arguments()
     arg_shapes, _, aux_shapes = \
                 self.symbol.infer_shape(data=self.data_shape, 
-                                        label=self.label_shape)
+                                        **self.label_shape)
 
     self.arg_params = {}
     self.update_params = {}
     for name, shape in zip(arg_names, arg_shapes):
+#      print name, shape
       self.arg_params[name] = mx.nd.zeros(shape, self.ctx)
       if name.endswith('weight') or name.endswith('bias') or name.endswith('gamma') or name.endswith('beta'):
 #        print name
@@ -417,12 +418,15 @@ class CarReID_Proxy_Solver(object):
 #        print '--------------------'
         for key in update_dict:
           arr = self.grad_params[key]
-#          print key, np.mean(arr.asnumpy()), np.mean(self.arg_params[key].asnumpy())
+#          if key.endswith('_fc1_weight') or key.endswith('_fc1_bias'):
+#            print key, np.mean(arr.asnumpy()), np.mean(self.arg_params[key].asnumpy())
+#            print key, arr.asnumpy(), self.arg_params[key].asnumpy()
           self.updater(key, arr, self.arg_params[key])
 
-        outval = output_dict[0].asnumpy()
+        outval = output_dict['proxy_nca_loss_output'].asnumpy()
+#        print outval
 
-        cost.append(outval[0])
+        cost.append(np.sum(outval))
         lrsch = self.optimizer.lr_scheduler
         step = lrsch.step
         nowlr = lrsch.base_lr

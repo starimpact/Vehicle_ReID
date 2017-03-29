@@ -26,9 +26,11 @@ def get_proxyset(proxyfn, proxyshape):
     return proxy_set
 
   print 'creating proxy set to ', proxyfn
-  p = np.random.rand(proxyshape[0], proxyshape[1], dtype=np.float32)  
+  p = np.random.rand(proxyshape[0], proxyshape[1]) - 0.5 
+  p = p.astype(dtype=np.float32)
   pn = np.sqrt(np.sum(p*p, axis=1))
-  proxy_set = p / pn
+  pn = np.reshape(pn, (pn.shape[0], 1))
+  proxy_set = p / pn * 1
   cPickle.dump(proxy_set, open(proxyfn, 'wb'));
   return proxy_set
 
@@ -371,6 +373,7 @@ def get_data_label_proxy(data_infos, label_infos, datalist, data_rndidx, proxyse
     labels['proxy_y'][si] = proxyset[carid]
     labels['proxy_Z'][:] = proxyset
     labels['proxy_M'][si, carid] = 0
+#    print proxyset[carid], np.sum(proxyset[carid] * proxyset[carid])
     if False:
       imgsave = (stdson*255).astype(np.uint8)
       cv2.imwrite('tmpimg/stdson%d.jpg'%(int(carid)), imgsave)
