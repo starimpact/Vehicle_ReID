@@ -223,7 +223,7 @@ def create_inception_resnet_v2(data, namepre='', args=None):
     args['finalfc']['weight'] = mx.sym.Variable(namepre+'_fc1_weight')
     args['finalfc']['bias'] = mx.sym.Variable(namepre+'_fc1_bias')
     
-  reid_fc1 = mx.sym.FullyConnected(data=drop1, num_hidden=256, name=namepre+"_fc1", 
+  reid_fc1 = mx.sym.FullyConnected(data=drop1, num_hidden=128, name=namepre+"_fc1", 
                                    weight=args['finalfc']['weight'], bias=args['finalfc']['bias']) 
   reid_act = mx.sym.Activation(data=reid_fc1, act_type='tanh', name=namepre+'_fc1_relu')
 
@@ -236,33 +236,47 @@ def create_reid_net(batch_size, proxy_num):
   print "note: image size must be:(299, 299)"
 
   data0 = mx.sym.Variable('data')
-  proxy_y = mx.sym.Variable('proxy_y')
+  proxy_yM = mx.sym.Variable('proxy_yM')
   proxy_Z = mx.sym.Variable('proxy_Z')
-  proxy_M = mx.sym.Variable('proxy_M')
+  proxy_ZM = mx.sym.Variable('proxy_ZM')
   args_all = None
   reid_feature, args_all = create_inception_resnet_v2(data0, namepre='part1', args=args_all)
   features = mx.sym.SliceChannel(reid_feature, axis=0, num_outputs=batch_size, name='features_slice')
-  proxy_ys = mx.sym.SliceChannel(proxy_y, axis=0, num_outputs=batch_size, name='proxy_y_slice')
-  proxy_Ms = mx.sym.SliceChannel(proxy_M, axis=0, num_outputs=batch_size, name='proxy_M_slice')
+  proxy_yMs = mx.sym.SliceChannel(proxy_yM, axis=0, num_outputs=batch_size, name='proxy_yM_slice')
+  proxy_ZMs = mx.sym.SliceChannel(proxy_ZM, axis=0, num_outputs=batch_size, name='proxy_ZM_slice')
   proxy_ncas = []
-  min_value = 0#10**-16
+  min_value = 10**-16
+  
+  #norm
+  if True:
+    proxy_Znorm = mx.sym.sqrt(mx.sym.sum_axis(proxy_Z**2, axis=1))
+    proxy_Znorm = mx.sym.Reshape(proxy_Znorm, shape=(-2, 1))
+    proxy_Z = mx.sym.broadcast_div(proxy_Z, proxy_Znorm)
+
   for bi in xrange(batch_size):
     one_feat = features[bi]
-    one_feat_norm = mx.sym.sqrt(mx.sym.sum(one_feat**2))
-    one_feat_norm = mx.sym.Reshape(one_feat_norm, shape=(-2, 1))
-    one_feat = mx.sym.broadcast_div(one_feat, one_feat_norm)
     
-    one_proxy_y = proxy_ys[bi]
-    one_proxy_M = proxy_Ms[bi]
+    #norm 
+    if True:
+      one_feat_norm = mx.sym.sqrt(mx.sym.sum(one_feat**2))
+      one_feat_norm = mx.sym.Reshape(one_feat_norm, shape=(-2, 1))
+      one_feat = mx.sym.broadcast_div(one_feat, one_feat_norm)
+    
+    one_proxy_yM = proxy_yMs[bi]
+    one_proxy_ZM = proxy_ZMs[bi]
+
     z = mx.sym.broadcast_minus(one_feat, proxy_Z)
     z = mx.sym.square(z)
     z = mx.sym.sum_axis(z, axis=1)
     z = -z
-    tM = mx.sym.Reshape(one_proxy_M, shape=(-1,))
+    tM = mx.sym.Reshape(one_proxy_ZM, shape=(-1,))
     z = mx.sym.exp(z) * tM
-#    z = mx.sym.sum(z)/proxy_num + min_value 
     z = mx.sym.sum(z) + min_value 
 
+    tyM = mx.sym.Reshape(one_proxy_yM, shape=(-1, 1))
+    one_proxy_y = mx.sym.broadcast_mul(tyM, proxy_Z)
+    one_proxy_y = mx.sym.sum_axis(one_proxy_y, axis=0)
+    one_feat = mx.sym.Reshape(one_feat, shape=(-1,))
     y = one_feat - one_proxy_y
     y = mx.sym.square(y)
     y = mx.sym.sum(y)

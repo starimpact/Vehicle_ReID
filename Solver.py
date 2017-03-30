@@ -355,7 +355,9 @@ class CarReID_Proxy_Solver(object):
     for name, shape in zip(arg_names, arg_shapes):
 #      print name, shape
       self.arg_params[name] = mx.nd.zeros(shape, self.ctx)
-      if name.endswith('weight') or name.endswith('bias') or name.endswith('gamma') or name.endswith('beta'):
+      if name.endswith('weight') or name.endswith('bias') or \
+          name.endswith('gamma') or name.endswith('beta') or \
+          name=='proxy_Z':
 #        print name
         self.update_params[name] = self.arg_params[name]
 
@@ -418,13 +420,16 @@ class CarReID_Proxy_Solver(object):
 #        print '--------------------'
         for key in update_dict:
           arr = self.grad_params[key]
-          if key.endswith('_fc1_weight') or key.endswith('_fc1_bias'):
-            print key, np.mean(arr.asnumpy()), np.mean(self.arg_params[key].asnumpy())
+#          if key.endswith('_fc1_weight') or key.endswith('_fc1_bias'):
+#            print key, np.mean(arr.asnumpy()), np.mean(self.arg_params[key].asnumpy())
 #            print key, arr.asnumpy(), self.arg_params[key].asnumpy()
+          if False and key=='proxy_Z':
+             print key, np.sum(arr.asnumpy()**2, axis=1)
+             print key, np.sum(self.arg_params[key].asnumpy()**2, axis=1)
           self.updater(key, arr, self.arg_params[key])
 
         outval = output_dict['proxy_nca_loss_output'].asnumpy()
-        print np.mean(outval)
+#        print np.mean(outval)
 
         cost.append(np.mean(outval))
         lrsch = self.optimizer.lr_scheduler

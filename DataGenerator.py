@@ -340,9 +340,9 @@ def get_data_label_proxy(data_infos, label_infos, datalist, data_rndidx, proxyse
   datas = {}
   labels = {}
   datas['data'] = np.zeros(data_infos[0][1], dtype=np.float32)
-  labels['proxy_y'] = np.zeros(label_infos[0][1], dtype=np.float32)
+  labels['proxy_yM'] = np.zeros(label_infos[0][1], dtype=np.float32)
   labels['proxy_Z'] = np.zeros(label_infos[1][1], dtype=np.float32)
-  labels['proxy_M'] = np.ones(label_infos[2][1], dtype=np.float32)
+  labels['proxy_ZM'] = np.ones(label_infos[2][1], dtype=np.float32)
   #ready same data
   for si in xrange(batchsize):
     onecar = cars[si]
@@ -370,9 +370,9 @@ def get_data_label_proxy(data_infos, label_infos, datalist, data_rndidx, proxyse
     datas['data'][si, 0] = stdson[:, :, 0]
     datas['data'][si, 1] = stdson[:, :, 1]
     datas['data'][si, 2] = stdson[:, :, 2]
-    labels['proxy_y'][si] = proxyset[carid]
+    labels['proxy_yM'][si, carid] = 1
     labels['proxy_Z'][:] = proxyset
-    labels['proxy_M'][si, carid] = 0
+    labels['proxy_ZM'][si, carid] = 0
 #    print proxyset[carid], np.sum(proxyset[carid] * proxyset[carid])
     if False:
       imgsave = (stdson*255).astype(np.uint8)
