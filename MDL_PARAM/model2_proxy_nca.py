@@ -250,7 +250,7 @@ def create_reid_net(batch_size, proxy_num):
     one_feat = features[bi]
     one_feat_norm = mx.sym.sqrt(mx.sym.sum(one_feat**2))
     one_feat_norm = mx.sym.Reshape(one_feat_norm, shape=(-2, 1))
-    one_feat = mx.sym.broadcast_div(one_feat, one_feat_norm) * 4.0
+    one_feat = mx.sym.broadcast_div(one_feat, one_feat_norm)
     
     one_proxy_y = proxy_ys[bi]
     one_proxy_M = proxy_Ms[bi]
