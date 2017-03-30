@@ -119,7 +119,7 @@ def Do_Proxy_NCA_Train():
   
   dlr = 1000000/batch_size
 #  dlr_steps = [dlr, dlr*2, dlr*3, dlr*4]
-  lr_start = 10**-2
+  lr_start = 10**-1
   lr_min = 10**-6
   lr_reduce = 0.1
   lr_stepnum = np.log(lr_min/lr_start)/np.log(lr_reduce)
@@ -131,14 +131,14 @@ def Do_Proxy_NCA_Train():
 #  lr_scheduler = mx.lr_scheduler.FactorScheduler(dlr, 0.9)
   param_prefix = 'MDL_PARAM/params2_proxy_nca/car_reid'
   solver = CarReID_Proxy_Solver(param_prefix, reid_net, ctx, data_shape, label_shape, num_epoch, 
-                    momentum=0.0, wd=0.0000, learning_rate=lr_start, lr_scheduler=lr_scheduler)
+                    momentum=0.9, wd=0.0005, learning_rate=lr_start, lr_scheduler=lr_scheduler)
 #  solver = CarReID_Softmax_Solver(param_prefix, reid_net, ctx, data_shape, label_shape, num_epoch, 
 #                    opt_method='rmsprop', wd=0.0005, learning_rate=lr_start, lr_scheduler=lr_scheduler)
 
 
   print 'fitting...'
-  resotre_whichone = None 
-  solver.fit(data_train, showperiod=10, whichone=resotre_whichone, logger=logger) 
+  resotre_whichone = None
+  solver.fit(data_train, showperiod=100, whichone=resotre_whichone, logger=logger) 
   print 'over...'
 
   return 

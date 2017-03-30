@@ -30,7 +30,7 @@ def get_proxyset(proxyfn, proxyshape):
   p = p.astype(dtype=np.float32)
   pn = np.sqrt(np.sum(p*p, axis=1))
   pn = np.reshape(pn, (pn.shape[0], 1))
-  proxy_set = p / pn * 1
+  proxy_set = p / pn * 4.0
   cPickle.dump(proxy_set, open(proxyfn, 'wb'));
   return proxy_set
 

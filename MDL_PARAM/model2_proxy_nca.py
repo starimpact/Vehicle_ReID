@@ -245,12 +245,12 @@ def create_reid_net(batch_size, proxy_num):
   proxy_ys = mx.sym.SliceChannel(proxy_y, axis=0, num_outputs=batch_size, name='proxy_y_slice')
   proxy_Ms = mx.sym.SliceChannel(proxy_M, axis=0, num_outputs=batch_size, name='proxy_M_slice')
   proxy_ncas = []
-  min_value = 10**-16
+  min_value = 0#10**-16
   for bi in xrange(batch_size):
     one_feat = features[bi]
     one_feat_norm = mx.sym.sqrt(mx.sym.sum(one_feat**2))
     one_feat_norm = mx.sym.Reshape(one_feat_norm, shape=(-2, 1))
-    one_feat = mx.sym.broadcast_div(one_feat, one_feat_norm)
+    one_feat = mx.sym.broadcast_div(one_feat, one_feat_norm) * 4.0
     
     one_proxy_y = proxy_ys[bi]
     one_proxy_M = proxy_Ms[bi]
@@ -260,7 +260,7 @@ def create_reid_net(batch_size, proxy_num):
     z = -z
     tM = mx.sym.Reshape(one_proxy_M, shape=(-1,))
     z = mx.sym.exp(z) * tM
-#    z = mx.sym.sum(z)/proxy_num + 0.000001
+#    z = mx.sym.sum(z)/proxy_num + min_value 
     z = mx.sym.sum(z) + min_value 
 
     y = one_feat - one_proxy_y
@@ -273,7 +273,7 @@ def create_reid_net(batch_size, proxy_num):
     proxy_ncas.append(one_proxy_nca)
 
   proxy_nca = mx.sym.Concat(*proxy_ncas, dim=0)
-  reid_net = mx.sym.sum(proxy_nca) 
+  reid_net = proxy_nca 
 #  reid_net = proxy_nca
   reid_net  = mx.sym.MakeLoss(reid_net, name='proxy_nca_loss')
 

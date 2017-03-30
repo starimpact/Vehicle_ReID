@@ -418,15 +418,15 @@ class CarReID_Proxy_Solver(object):
 #        print '--------------------'
         for key in update_dict:
           arr = self.grad_params[key]
-#          if key.endswith('_fc1_weight') or key.endswith('_fc1_bias'):
-#            print key, np.mean(arr.asnumpy()), np.mean(self.arg_params[key].asnumpy())
+          if key.endswith('_fc1_weight') or key.endswith('_fc1_bias'):
+            print key, np.mean(arr.asnumpy()), np.mean(self.arg_params[key].asnumpy())
 #            print key, arr.asnumpy(), self.arg_params[key].asnumpy()
           self.updater(key, arr, self.arg_params[key])
 
         outval = output_dict['proxy_nca_loss_output'].asnumpy()
-#        print outval
+        print np.mean(outval)
 
-        cost.append(np.sum(outval))
+        cost.append(np.mean(outval))
         lrsch = self.optimizer.lr_scheduler
         step = lrsch.step
         nowlr = lrsch.base_lr
