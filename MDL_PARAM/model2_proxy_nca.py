@@ -225,9 +225,9 @@ def create_inception_resnet_v2(data, namepre='', args=None):
     
   reid_fc1 = mx.sym.FullyConnected(data=drop1, num_hidden=128, name=namepre+"_fc1", 
                                    weight=args['finalfc']['weight'], bias=args['finalfc']['bias']) 
-  reid_act = mx.sym.Activation(data=reid_fc1, act_type='tanh', name=namepre+'_fc1_relu')
+#  reid_act = mx.sym.Activation(data=reid_fc1, act_type='tanh', name=namepre+'_fc1_relu')
 
-  net = reid_act
+  net = reid_fc1
 
   return net, args
 
@@ -246,12 +246,13 @@ def create_reid_net(batch_size, proxy_num):
   proxy_ZMs = mx.sym.SliceChannel(proxy_ZM, axis=0, num_outputs=batch_size, name='proxy_ZM_slice')
   proxy_ncas = []
   min_value = 10**-16
+  norm_value = 4.0
   
   #norm
   if True:
     proxy_Znorm = mx.sym.sqrt(mx.sym.sum_axis(proxy_Z**2, axis=1))
     proxy_Znorm = mx.sym.Reshape(proxy_Znorm, shape=(-2, 1))
-    proxy_Z = mx.sym.broadcast_div(proxy_Z, proxy_Znorm)
+    proxy_Z = mx.sym.broadcast_div(proxy_Z, proxy_Znorm) * norm_value
 
   for bi in xrange(batch_size):
     one_feat = features[bi]
@@ -260,7 +261,7 @@ def create_reid_net(batch_size, proxy_num):
     if True:
       one_feat_norm = mx.sym.sqrt(mx.sym.sum(one_feat**2))
       one_feat_norm = mx.sym.Reshape(one_feat_norm, shape=(-2, 1))
-      one_feat = mx.sym.broadcast_div(one_feat, one_feat_norm)
+      one_feat = mx.sym.broadcast_div(one_feat, one_feat_norm) * norm_value
     
     one_proxy_yM = proxy_yMs[bi]
     one_proxy_ZM = proxy_ZMs[bi]
@@ -322,6 +323,10 @@ def CreateModel_Color_Split_test():
    data1 = mx.sym.Variable('part1_data')
    args_all = None
    reid_feature, args_all = create_inception_resnet_v2(data1, namepre='part1', args=args_all)
+   if True:
+     feature_norm = mx.sym.sqrt(mx.sym.sum_axis(reid_feature**2, axis=1))
+     feature_norm = mx.sym.Reshape(feature_norm, shape=(-2, 1))
+     reid_feature = mx.sym.broadcast_div(reid_feature, feature_norm) * 4
 
    feature1 = mx.sym.Variable('feature1_data')
    feature2 = mx.sym.Variable('feature2_data')

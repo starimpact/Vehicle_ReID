@@ -385,6 +385,7 @@ class CarReID_Proxy_Solver(object):
 
   def fit(self, train_data, grad_req='write', showperiod=100, whichone=None, logger=None):
     if logger is not None:
+     
       logger.info('Start training with %s', str(self.ctx))
 
     savefunc = save_checkpoint
@@ -392,6 +393,9 @@ class CarReID_Proxy_Solver(object):
     self.get_params(grad_req)
     if whichone is not None:
       self.set_params(whichone)
+    else:
+      self.arg_params['proxy_Z'][:] = mx.nd.array(train_data.proxy_set, self.ctx)
+
     self.optimizer = mx.optimizer.create(self.opt_method, rescale_grad=(1.0 / self.batchsize), **self.kwargs)
     self.updater = mx.optimizer.get_updater(self.optimizer)
     self.executor = self.symbol.bind(self.ctx, self.arg_params, args_grad=self.grad_params,
@@ -420,13 +424,10 @@ class CarReID_Proxy_Solver(object):
 #        print '--------------------'
         for key in update_dict:
           arr = self.grad_params[key]
-#          if key.endswith('_fc1_weight') or key.endswith('_fc1_bias'):
-#            print key, np.mean(arr.asnumpy()), np.mean(self.arg_params[key].asnumpy())
-#            print key, arr.asnumpy(), self.arg_params[key].asnumpy()
-          if False and key=='proxy_Z':
-             print key, np.sum(arr.asnumpy()**2, axis=1)
-             print key, np.sum(self.arg_params[key].asnumpy()**2, axis=1)
           self.updater(key, arr, self.arg_params[key])
+#          if key.endswith('_fc1_weight'):
+          if False and key=='proxy_Z':
+             print key, np.mean(np.abs(arr.asnumpy())), np.mean(np.abs(self.arg_params[key].asnumpy()))
 
         outval = output_dict['proxy_nca_loss_output'].asnumpy()
 #        print np.mean(outval)

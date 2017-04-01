@@ -104,7 +104,7 @@ def Do_Proxy_NCA_Train():
   num_epoch = 10000
   batch_size = 32
   featdim = 128
-  proxy_num = 500#43928
+  proxy_num = 43928
   clsnum = proxy_num
   data_shape = (batch_size, 3, 299, 299)
   proxy_yM_shape = (batch_size, proxy_num)
@@ -112,8 +112,8 @@ def Do_Proxy_NCA_Train():
   proxy_ZM_shape = (batch_size, proxy_num)
   label_shape = dict(zip(['proxy_yM', 'proxy_Z', 'proxy_ZM'], [proxy_yM_shape, proxy_Z_shape, proxy_ZM_shape]))
   proxyfn = 'proxy.bin'
-#  datafn = '/home/mingzhang/data/car_ReID_for_zhangming/data_each.list' #43928 calss number.
-  datafn = '/home/mingzhang/data/car_ReID_for_zhangming/data_each.500.list'
+  datafn = '/home/mingzhang/data/car_ReID_for_zhangming/data_each.list' #43928 calss number.
+#  datafn = '/home/mingzhang/data/car_ReID_for_zhangming/data_each.500.list'
   data_train = CarReID_Proxy_Iter(['data'], [data_shape], ['proxy_yM', 'proxy_Z', 'proxy_ZM'], [proxy_yM_shape, proxy_Z_shape, proxy_ZM_shape], datafn, proxyfn)
   reid_net = proxy_nca_model.CreateModel_Color(ctx, batch_size, proxy_num, data_shape[2:])
   

@@ -30,7 +30,7 @@ def get_proxyset(proxyfn, proxyshape):
   p = p.astype(dtype=np.float32)
   pn = np.sqrt(np.sum(p*p, axis=1))
   pn = np.reshape(pn, (pn.shape[0], 1))
-  proxy_set = p / pn
+  proxy_set = p / pn * 4.0
   cPickle.dump(proxy_set, open(proxyfn, 'wb'));
   return proxy_set
 
@@ -341,7 +341,7 @@ def get_data_label_proxy(data_infos, label_infos, datalist, data_rndidx, proxyse
   labels = {}
   datas['data'] = np.zeros(data_infos[0][1], dtype=np.float32)
   labels['proxy_yM'] = np.zeros(label_infos[0][1], dtype=np.float32)
-  labels['proxy_Z'] = np.zeros(label_infos[1][1], dtype=np.float32)
+#  labels['proxy_Z'] = np.zeros(label_infos[1][1], dtype=np.float32)
   labels['proxy_ZM'] = np.ones(label_infos[2][1], dtype=np.float32)
   #ready same data
   for si in xrange(batchsize):
@@ -371,7 +371,7 @@ def get_data_label_proxy(data_infos, label_infos, datalist, data_rndidx, proxyse
     datas['data'][si, 1] = stdson[:, :, 1]
     datas['data'][si, 2] = stdson[:, :, 2]
     labels['proxy_yM'][si, carid] = 1
-    labels['proxy_Z'][:] = proxyset
+#    labels['proxy_Z'][:] = proxyset
     labels['proxy_ZM'][si, carid] = 0
 #    print proxyset[carid], np.sum(proxyset[carid] * proxyset[carid])
     if False:
