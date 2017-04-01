@@ -65,11 +65,11 @@ def Do_Softmax_Train():
   clsnum=43928
   reid_net = softmax_model.CreateModel_Color(ctx, batch_size, data_shape[2:], clsnum)
   
-  dlr = 1000000/batch_size
+  dlr = 100000/batch_size
 #  dlr_steps = [dlr, dlr*2, dlr*3, dlr*4]
-  lr_start = 10**-3
+  lr_start = 10**-2
   lr_min = 10**-5
-  lr_reduce = 0.1
+  lr_reduce = 0.9
   lr_stepnum = np.log(lr_min/lr_start)/np.log(lr_reduce)
   lr_stepnum = np.int(np.ceil(lr_stepnum))
   dlr_steps = [dlr*i for i in xrange(1, lr_stepnum+1)]
@@ -79,13 +79,13 @@ def Do_Softmax_Train():
 #  lr_scheduler = mx.lr_scheduler.FactorScheduler(dlr, 0.9)
   param_prefix = 'MDL_PARAM/params2_softmax/car_reid'
   solver = CarReID_Softmax_Solver(param_prefix, reid_net, ctx, data_shape, label_shape, num_epoch, 
-                    momentum=0.9, wd=0.0005, learning_rate=lr_start, lr_scheduler=lr_scheduler)
+                         falsebigbatch=100, momentum=0.9, wd=0.0005, learning_rate=lr_start, lr_scheduler=lr_scheduler)
 #  solver = CarReID_Softmax_Solver(param_prefix, reid_net, ctx, data_shape, label_shape, num_epoch, 
 #                    opt_method='rmsprop', wd=0.0005, learning_rate=lr_start, lr_scheduler=lr_scheduler)
 
 
   print 'fitting...'
-  resotre_whichone = 1 
+  resotre_whichone = 0 
   solver.fit(data_train, showperiod=100, whichone=resotre_whichone, logger=logger) 
   print 'over...'
 
@@ -117,11 +117,11 @@ def Do_Proxy_NCA_Train():
   data_train = CarReID_Proxy_Iter(['data'], [data_shape], ['proxy_yM', 'proxy_Z', 'proxy_ZM'], [proxy_yM_shape, proxy_Z_shape, proxy_ZM_shape], datafn, proxyfn)
   reid_net = proxy_nca_model.CreateModel_Color(ctx, batch_size, proxy_num, data_shape[2:])
   
-  dlr = 1000000/batch_size
+  dlr = 100000/batch_size
 #  dlr_steps = [dlr, dlr*2, dlr*3, dlr*4]
   lr_start = 10**-1
   lr_min = 10**-6
-  lr_reduce = 0.1
+  lr_reduce = 0.9
   lr_stepnum = np.log(lr_min/lr_start)/np.log(lr_reduce)
   lr_stepnum = np.int(np.ceil(lr_stepnum))
   dlr_steps = [dlr*i for i in xrange(1, lr_stepnum+1)]
@@ -149,6 +149,6 @@ def Do_Proxy_NCA_Train():
 
 if __name__=='__main__':
 #  Do_Train()
-#  Do_Softmax_Train()
-  Do_Proxy_NCA_Train()
+  Do_Softmax_Train()
+#  Do_Proxy_NCA_Train()
 

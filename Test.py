@@ -155,7 +155,7 @@ def Do_Softmax_Test_Acc(ctx, resotre_whichone):
 
 if __name__=='__main__':
 #  Do_Test()
-  restore_whichone = 2
+  restore_whichone = 4
   ctx = mx.gpu(3)
 #  Do_Softmax_Test_Acc(ctx, restore_whichone)
   Do_Feature_Test(restore_whichone, ctx)
