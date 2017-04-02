@@ -174,6 +174,7 @@ class CarReID_Proxy_Solver(object):
     self.num_epoch = num_epoch
     self.update_params = None
     self.falsebigbatch = falsebigbatch
+    print 'false big batch size:%d*%d=%d'%(falsebigbatch, self.batchsize, falsebigbatch * self.batchsize)
     self.arg_params = None
     self.aux_params = None
     self.grad_params = None
@@ -231,7 +232,7 @@ class CarReID_Proxy_Solver(object):
   def set_params(self, whichone):
     logging.info('loading checkpoint from %s-->%d...', self.prefix, whichone)
     loadfunc = mx.model.load_checkpoint
-    self.symbol, update_params, aux_params = loadfunc(self.prefix, whichone)
+    _, update_params, aux_params = loadfunc(self.prefix, whichone)
     for name in self.update_params:
       self.arg_params[name][:] = update_params[name]
     for name in self.aux_params:
@@ -326,6 +327,7 @@ class CarReID_Softmax_Solver(object):
     self.opt_method = opt_method
     self.optimizer = None
     self.falsebigbatch = falsebigbatch
+    print 'false big batch size:%d*%d=%d'%(falsebigbatch, self.batchsize, falsebigbatch * self.batchsize)
     self.bigbatch_grads = None
     self.updater = None
     self.kwargs = kwargs.copy()

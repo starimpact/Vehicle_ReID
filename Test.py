@@ -5,8 +5,8 @@ import mxnet as mx
 from DataIter import CarReID_Iter, CarReID_Test_Iter, CarReID_Feat_Query_Iter, CarReID_Feat_Iter, CarReID_Softmax_Iter
 from Solver import CarReID_Solver
 from Predictor import CarReID_Predictor, CarReID_Feature_Predictor, CarReID_Compare_Predictor, CarReID_Softmax_Predictor
-#from MDL_PARAM import model2_softmax as now_model
-from MDL_PARAM import model2_proxy_nca as now_model
+from MDL_PARAM import model2_softmax as now_model
+#from MDL_PARAM import model2_proxy_nca as now_model
 
 def Do_Test():
   print 'Testing...'
@@ -67,7 +67,7 @@ def Do_Feature_Test(restore, ctx=mx.cpu()):
   
 #  lr_scheduler = mx.lr_scheduler.FactorScheduler(dlr, 0.9)
   param_prefix = 'MDL_PARAM/params2_softmax/car_reid'
-  param_prefix = 'MDL_PARAM/params2_proxy_nca/car_reid'
+#  param_prefix = 'MDL_PARAM/params2_proxy_nca/car_reid'
   predictor_feature = CarReID_Feature_Predictor(param_prefix, reid_feature_net, ctx, data_shape)
 
   print 'Extracting feature...'
@@ -97,7 +97,7 @@ def Do_Compare_Test(restore, ctx=mx.cpu()):
   data_shape = (1000, 1536) #model2
   data_shape = (1000, 512) #model1_softmax
   data_shape = (1000, 256) #model1_softmax2, model2_softmax
-  data_shape = (1000, 128) #model2_proxy_nca
+#  data_shape = (1000, 128) #model2_proxy_nca
   data_query_fn = fdir+'/cam_feat_0.list'
   data_query = CarReID_Feat_Query_Iter(['feature1_data'], [data_shape], data_query_fn)
   data_set_fn = fdir+'/cam_feat_1.list'
@@ -111,7 +111,7 @@ def Do_Compare_Test(restore, ctx=mx.cpu()):
   
 #  lr_scheduler = mx.lr_scheduler.FactorScheduler(dlr, 0.9)
   param_prefix = 'MDL_PARAM/params2_softmax/car_reid'
-  param_prefix = 'MDL_PARAM/params2_proxy_nca/car_reid'
+#  param_prefix = 'MDL_PARAM/params2_proxy_nca/car_reid'
   predictor_compare = CarReID_Compare_Predictor(param_prefix, reid_cmp_net, ctx, data_shape)
 
   print 'Comparing...'
@@ -155,7 +155,7 @@ def Do_Softmax_Test_Acc(ctx, resotre_whichone):
 
 if __name__=='__main__':
 #  Do_Test()
-  restore_whichone = 4
+  restore_whichone = 0
   ctx = mx.gpu(3)
 #  Do_Softmax_Test_Acc(ctx, restore_whichone)
   Do_Feature_Test(restore_whichone, ctx)

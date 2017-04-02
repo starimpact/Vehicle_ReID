@@ -65,9 +65,9 @@ def Do_Softmax_Train():
   clsnum=43928
   reid_net = softmax_model.CreateModel_Color(ctx, batch_size, data_shape[2:], clsnum)
   
-  dlr = 100000/batch_size
+  dlr = 400000/batch_size
 #  dlr_steps = [dlr, dlr*2, dlr*3, dlr*4]
-  lr_start = 10**-2
+  lr_start = 10**-3
   lr_min = 10**-5
   lr_reduce = 0.9
   lr_stepnum = np.log(lr_min/lr_start)/np.log(lr_reduce)
@@ -79,13 +79,13 @@ def Do_Softmax_Train():
 #  lr_scheduler = mx.lr_scheduler.FactorScheduler(dlr, 0.9)
   param_prefix = 'MDL_PARAM/params2_softmax/car_reid'
   solver = CarReID_Softmax_Solver(param_prefix, reid_net, ctx, data_shape, label_shape, num_epoch, 
-                         falsebigbatch=100, momentum=0.9, wd=0.0005, learning_rate=lr_start, lr_scheduler=lr_scheduler)
+                         falsebigbatch=10, momentum=0.9, wd=0.0005, learning_rate=lr_start, lr_scheduler=lr_scheduler)
 #  solver = CarReID_Softmax_Solver(param_prefix, reid_net, ctx, data_shape, label_shape, num_epoch, 
 #                    opt_method='rmsprop', wd=0.0005, learning_rate=lr_start, lr_scheduler=lr_scheduler)
 
 
   print 'fitting...'
-  resotre_whichone = 0 
+  resotre_whichone = 6 
   solver.fit(data_train, showperiod=100, whichone=resotre_whichone, logger=logger) 
   print 'over...'
 
