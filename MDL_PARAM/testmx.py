@@ -23,6 +23,7 @@ def test():
  
   c_exe.forward()
   print c_exe.outputs[0].asnumpy().shape
+#  c_exe.outputs[1][:] = 0
   print c_exe.outputs[1].asnumpy()
 
 
