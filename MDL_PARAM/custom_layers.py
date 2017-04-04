@@ -96,3 +96,40 @@ class Masked_LayerProp(mx.operator.CustomOpProp):
 
 ###############################################################################
 
+class Proxy_Set(mx.operator.CustomOp):
+    def forward(self, is_train, req, in_data, out_data, aux):
+        x = in_data[0]
+        self.assign(out_data[0], req[0], x)
+
+    def backward(self, req, out_grad, in_data, out_data, in_grad, aux):
+        tt = out_grad[0]
+        self.assign(in_grad[0], req[0], tt)
+
+
+@mx.operator.register("proxy_set")
+class Proxy_SetProp(mx.operator.CustomOpProp):
+    def __init__(self, proxy_num):
+        super(Proxy_SetProp, self).__init__(need_top_grad=True)
+        self.proxy_num = long(proxy_num)
+    
+    def list_arguments(self):
+        return ['data', 'proxy']
+
+    def list_outputs(self):
+        return ['output']
+
+    def infer_shape(self, inshape):
+        data_shape = inshape[0]
+        proxy_shape = (self.proxy_num, data_shape[1])
+        output_shape = data_shape
+        return [data_shape, proxy_shape], [output_shape], []
+
+    def create_operator(self, ctx, shapes, dtypes):
+        return Proxy_Set()
+
+    def declare_backward_dependency(self, out_grad, in_data, out_data):
+        return [out_grad[0]]
+
+
+###############################################################################
+
