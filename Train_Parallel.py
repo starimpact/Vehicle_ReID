@@ -35,8 +35,9 @@ def Do_Proxy_NCA_Train():
 #  datafn = '/home/mingzhang/data/car_ReID_for_zhangming/data_each.500.list'
   data_train = CarReID_Proxy2_Iter(['data'], [data_shape], ['proxy_yM', 'proxy_ZM'], [proxy_yM_shape, proxy_ZM_shape], datafn)
   
-  dlr = 100000/batch_size
+  dlr = 200000/batch_size
 #  dlr_steps = [dlr, dlr*2, dlr*3, dlr*4]
+
   lr_start = 10**-1
   lr_min = 10**-6
   lr_reduce = 0.9
@@ -57,20 +58,33 @@ def Do_Proxy_NCA_Train():
 
   reid_model = mx.model.FeedForward(ctx=ctxs, symbol=reid_net, 
                        begin_epoch=0, num_epoch=num_epoch, epoch_size=None, 
-                       learning_rate=0.1, momentum=0.9, wd=0.00005)
+                       learning_rate=0.1, momentum=0.9, wd=0.00005, lr_scheduler=lr_scheduler)
 
   def batch_end_call(*args, **kwargs):
   #  print eval_metric.loss_list
     epoch = args[0].epoch
     nbatch = args[0].nbatch
     eval_metric = args[0].eval_metric
-    if nbatch%100==0:
+    optimizer = args[0].locals['optimizer']
+    exe_manager = args[0].locals['executor_manager']
+    arg_p = args[0].locals['arg_params']
+    aux_p = args[0].locals['aux_params']
+    show_period = 100
+    if nbatch%show_period==0:
       avgloss = np.mean(eval_metric.loss_list)
-      print 'epoch:%d, nbatch:%d, loss:%f'%(epoch, nbatch, avgloss)
+      print 'epoch:%d, nbatch:%d, loss:%f, lr=%f'%(epoch, nbatch, avgloss, optimizer.lr_scheduler.base_lr)
+      exe_manager.copy_to(arg_p, aux_p)
       reid_model.save(param_prefix, epoch%4)
       eval_metric.loss_list = []
 
   proxy_metric = Proxy_Metric()
+  load_paramidx = 0
+  if load_paramidx is not None:
+    reid_model = mx.model.FeedForward.load(param_prefix, load_paramidx, ctx=ctxs,
+                           num_epoch=num_epoch, epoch_size=None,
+                           learning_rate=0.1, momentum=0.9, wd=0.00005, lr_scheduler=lr_scheduler)
+    print 'loaded the parameters form ', param_prefix, load_paramidx
+
   reid_model.fit(X=data_train, eval_metric=proxy_metric,
                  eval_end_callback=None,
                  batch_end_callback=batch_end_call) 
