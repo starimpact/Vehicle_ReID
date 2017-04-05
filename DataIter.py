@@ -236,7 +236,7 @@ class CarReID_Proxy_Iter(mx.io.DataIter):
 
 
 class CarReID_Proxy2_Iter(mx.io.DataIter):
-  def __init__(self, data_names, data_shapes, label_names, label_shapes, datafn):
+  def __init__(self, data_names, data_shapes, label_names, label_shapes, datafn, bucket_key):
     super(CarReID_Proxy2_Iter, self).__init__()
 
     self.batch_size = data_shapes[0][0]
@@ -249,6 +249,7 @@ class CarReID_Proxy2_Iter(mx.io.DataIter):
     self.rndidx_list = np.random.permutation(self.datalen)
     self.num_batches = self.datalen / label_shapes[0][0]
     self.labeldict = dict(self._provide_label)
+    self.default_bucket_key = bucket_key
 
   def __iter__(self):
     return self

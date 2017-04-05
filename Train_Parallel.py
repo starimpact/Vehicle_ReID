@@ -16,12 +16,22 @@ def Do_Proxy_NCA_Train():
   logger = logging.getLogger()
   logger.setLevel(logging.INFO)
   
-  ctxs = [mx.gpu(0), mx.gpu(1)]
+#  ctxs = [mx.gpu(0), mx.gpu(1), mx.gpu(2), mx.gpu(3)]
+  ctxs = [mx.gpu(0), mx.gpu(1), mx.gpu(3)]
+#  ctxs = [mx.gpu(0), mx.gpu(1)]
+#  ctxs = [mx.gpu(0)]
   
   devicenum = len(ctxs) 
 
   num_epoch = 10000
-  batch_size = 64
+  batch_size = 32*devicenum
+  show_period = 1000
+
+  assert(batch_size%devicenum==0)
+  bsz_per_device = batch_size / devicenum
+  print 'batch_size per device:', bsz_per_device
+  bucket_key = bsz_per_device
+
   featdim = 128
   proxy_num = 43928
   clsnum = proxy_num
@@ -33,7 +43,7 @@ def Do_Proxy_NCA_Train():
   proxyfn = 'proxy.bin'
   datafn = '/home/mingzhang/data/car_ReID_for_zhangming/data_each.list' #43928 calss number.
 #  datafn = '/home/mingzhang/data/car_ReID_for_zhangming/data_each.500.list'
-  data_train = CarReID_Proxy2_Iter(['data'], [data_shape], ['proxy_yM', 'proxy_ZM'], [proxy_yM_shape, proxy_ZM_shape], datafn)
+  data_train = CarReID_Proxy2_Iter(['data'], [data_shape], ['proxy_yM', 'proxy_ZM'], [proxy_yM_shape, proxy_ZM_shape], datafn, bucket_key)
   
   dlr = 200000/batch_size
 #  dlr_steps = [dlr, dlr*2, dlr*3, dlr*4]
@@ -49,12 +59,13 @@ def Do_Proxy_NCA_Train():
   lr_scheduler = mx.lr_scheduler.MultiFactorScheduler(dlr_steps, lr_reduce)
 #  lr_scheduler = mx.lr_scheduler.FactorScheduler(dlr, 0.9)
   param_prefix = 'MDL_PARAM/params2_proxy_nca/car_reid'
+  load_paramidx = 1
 
-  assert(batch_size%devicenum==0)
-  bsz_per_device = batch_size / devicenum
-  print 'batch_size per device:', bsz_per_device
   reid_net = proxy_nca_model.CreateModel_Color2(None, bsz_per_device, proxy_num, data_shape[2:])
 
+  def sym_genfunc(bucket_key):
+    reid_net = proxy_nca_model.CreateModel_Color2(None, bucket_key, proxy_num, data_shape[2:])
+    return reid_net
 
   reid_model = mx.model.FeedForward(ctx=ctxs, symbol=reid_net, 
                        begin_epoch=0, num_epoch=num_epoch, epoch_size=None, 
@@ -69,25 +80,24 @@ def Do_Proxy_NCA_Train():
     exe_manager = args[0].locals['executor_manager']
     arg_p = args[0].locals['arg_params']
     aux_p = args[0].locals['aux_params']
-    show_period = 100
     if nbatch%show_period==0:
-      avgloss = np.mean(eval_metric.loss_list)
+      avgloss = eval_metric.get()[1]
       print 'epoch:%d, nbatch:%d, loss:%f, lr=%f'%(epoch, nbatch, avgloss, optimizer.lr_scheduler.base_lr)
       exe_manager.copy_to(arg_p, aux_p)
       reid_model.save(param_prefix, epoch%4)
-      eval_metric.loss_list = []
+#      eval_metric.reset()
 
   proxy_metric = Proxy_Metric()
-  load_paramidx = 0
   if load_paramidx is not None:
     reid_model = mx.model.FeedForward.load(param_prefix, load_paramidx, ctx=ctxs,
                            num_epoch=num_epoch, epoch_size=None,
                            learning_rate=0.1, momentum=0.9, wd=0.00005, lr_scheduler=lr_scheduler)
     print 'loaded the parameters form ', param_prefix, load_paramidx
 
+  batch_end_calls = [batch_end_call, mx.callback.Speedometer(batch_size, show_period/10)]
   reid_model.fit(X=data_train, eval_metric=proxy_metric,
-                 eval_end_callback=None,
-                 batch_end_callback=batch_end_call) 
+                 eval_end_callback=None, kvstore=None,
+                 batch_end_callback=batch_end_calls) 
 
 
   return 
@@ -95,19 +105,23 @@ def Do_Proxy_NCA_Train():
 
 
 class Proxy_Metric(metric.EvalMetric):
-  def __init__(self):
+  def __init__(self, saveperiod=1):
     super(Proxy_Metric, self).__init__('proxy_metric')
     print "hello metric init..."
-    self.num = 0
-    self.loss_list = []
+    self.num_inst = 0
+    self.sum_metric = 0.0
+    self.p_inst = 0
+    self.saveperiod=saveperiod
 
-  def reset(self):
-    pass
+#  def reset(self):
+#    pass
 
   def update(self, labels, preds):
-    self.num += 1
-    loss = preds[0].asnumpy().mean()
-    self.loss_list.append(loss)
+    self.p_inst += 1
+    if self.p_inst%self.saveperiod==0:
+      self.num_inst += 1
+      loss = preds[0].asnumpy().mean()
+      self.sum_metric += loss
     
 
 if __name__=='__main__':
