@@ -119,10 +119,15 @@ class Proxy_SetProp(mx.operator.CustomOpProp):
         return ['output']
 
     def infer_shape(self, inshape):
+        print inshape
         data_shape = inshape[0]
         proxy_shape = (self.proxy_num, data_shape[1])
         output_shape = data_shape
         return [data_shape, proxy_shape], [output_shape], []
+
+    def infer_type(self, in_type):
+        print 'in_type:', in_type
+        return in_type, [in_type[0]], []
 
     def create_operator(self, ctx, shapes, dtypes):
         return Proxy_Set()
