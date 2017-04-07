@@ -180,17 +180,17 @@ def Do_Proxy_NCA_Train2():
   param_prefix = 'MDL_PARAM/params2_proxy_nca/car_reid'
 
   reid_net = proxy_nca_model.CreateModel_Color2(None, bsz_per_device, proxy_num, data_shape[2:])
-  reid_net_p = proxy_nca_model.CreateModel_Color2_P(None, bsz_per_device, proxy_num, data_shape[2:])
+#  reid_net_p = proxy_nca_model.CreateModel_Color2_P(None, bsz_per_device, proxy_num, data_shape[2:])
 
 
   reid_model = mx.mod.Module(context=ctxs, symbol=reid_net, 
                              label_names=['proxy_yM', 'proxy_ZM'])
-  reid_model_P = mx.mod.Module(context=mx.gpu(1), symbol=reid_net_p, 
-                             label_names=['proxy_yM', 'proxy_ZM'])
-
-  reid_model_P.bind(data_shapes=data_train.provide_data, 
-                    label_shapes=data_train.provide_label,
-                    for_training=False)
+#  reid_model_P = mx.mod.Module(context=mx.gpu(1), symbol=reid_net_p, 
+#                             label_names=['proxy_yM', 'proxy_ZM'])
+#
+#  reid_model_P.bind(data_shapes=data_train.provide_data, 
+#                    label_shapes=data_train.provide_label,
+#                    for_training=False)
 
 
   optimizer_params={'learning_rate':0.1,
@@ -222,21 +222,22 @@ def Do_Proxy_NCA_Train2():
     nbatch = args[0].nbatch + 1
     eval_metric = args[0].eval_metric
     data_batch = args[0].locals['data_batch']  
-    if True or nbatch%show_period==0:
+    if False or nbatch%show_period==0:
 #       fn = param_prefix + '_' + str(epoch%4) + '_' + '.bin'
 #       reid_model.save_params(fn)
 #       print 'saved parameters into', fn
-       args, auxs = reid_model.get_params()
-       proxy_Z = args['proxy_Z_weight'].asnumpy()
-       print 'z:', np.abs(proxy_Z).mean()
-       reid_model_P.set_params(args, auxs)
-       reid_model_P.forward(data_batch)
-       outs = reid_model_P.get_outputs()
-       val = outs[1].asnumpy()
-       val2 = outs[2].asnumpy()
-       val3 = outs[3].asnumpy()
-       val4 = outs[4].asnumpy()
-       print 'fc1:', np.abs(val).mean(), 'z:', val2.mean(), 'y:', val3, 'one_proxy:', np.abs(val4).mean(), val2[val2>val1]
+       if False:
+         args, auxs = reid_model.get_params()
+         proxy_Z = args['proxy_Z_weight'].asnumpy()
+         print 'z:', np.abs(proxy_Z).mean()
+         reid_model_P.set_params(args, auxs)
+         reid_model_P.forward(data_batch)
+         outs = reid_model_P.get_outputs()
+         val = outs[1].asnumpy()
+         val2 = outs[2].asnumpy()
+         val3 = outs[3].asnumpy()
+         val4 = outs[4].asnumpy()
+         print 'fc1:', np.abs(val).mean(), 'z:', val2.mean(), 'y:', val3, 'one_proxy:', np.abs(val4).mean(), val2[val2>val1]
 #       args, auxs = reid_model.get_params()
 #       print np.mean(args['proxy_Z_weight'].asnumpy())
 #      eval_metric.reset()
@@ -248,7 +249,7 @@ def Do_Proxy_NCA_Train2():
                  initializer=mx.init.Normal(),
                  begin_epoch=0, num_epoch=num_epoch, 
                  eval_end_callback=None,
-                 kvstore=None, monitor=mon,
+                 kvstore=None,# monitor=mon,
                  batch_end_callback=batch_end_calls) 
 
 
