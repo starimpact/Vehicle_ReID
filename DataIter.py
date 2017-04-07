@@ -206,7 +206,7 @@ class CarReID_Proxy_Iter(mx.io.DataIter):
     self.rndidx_list = np.random.permutation(self.datalen)
     self.num_batches = self.datalen / label_shapes[0][0]
     self.labeldict = dict(self._provide_label)
-    self.proxy_set = dg.get_proxyset(proxyfn, self.labeldict['proxy_Z'])
+    self.proxy_set = None#dg.get_proxyset(proxyfn, self.labeldict['proxy_Z'])
 
   def __iter__(self):
     return self

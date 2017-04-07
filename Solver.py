@@ -189,7 +189,8 @@ class CarReID_Proxy_Solver(object):
     for key in args:
       arr = args[key]
       if key.endswith('_weight'):
-        self.initializer(key, arr) 
+        self.initializer(mx.init.InitDesc(key), arr) 
+#        self.initializer(key, arr) 
       if key.endswith('_bias'):
         arr[:] = 0.0
       if key.endswith('_gamma'):
@@ -253,7 +254,10 @@ class CarReID_Proxy_Solver(object):
     if whichone is not None:
       self.set_params(whichone)
     else:
-      self.arg_params['proxy_Z'][:] = mx.nd.array(train_data.proxy_set, self.ctx)
+      import DataGenerator as dg
+      proxyfn = 'proxy.bin'
+      proxy_set = dg.get_proxyset(proxyfn, self.arg_params['proxy_Z'].shape)
+      self.arg_params['proxy_Z'][:] = mx.nd.array(proxy_set, self.ctx)
 
     self.optimizer = mx.optimizer.create(self.opt_method, rescale_grad=(1.0 / self.batchsize), **self.kwargs)
     self.updater = mx.optimizer.get_updater(self.optimizer)
@@ -270,12 +274,12 @@ class CarReID_Proxy_Solver(object):
       num_batches = train_data.num_batches
       for databatch in train_data:
         nbatch += 1
-        for k, v in databatch.data.items():
-#          print k, v.shape
-          self.arg_params[k][:] = mx.nd.array(v, self.ctx)
-        for k, v in databatch.label.items():
-#          print k, v
-          self.arg_params[k][:] = mx.nd.array(v, self.ctx)
+        for ks, v in zip(train_data.provide_data, databatch.data):
+          k = ks[0]
+          self.arg_params[k][:] = v
+        for ks, v in zip(train_data.provide_label, databatch.label):
+          k = ks[0]
+          self.arg_params[k][:] = v
         output_dict = {name: nd for name, nd in zip(self.symbol.list_outputs(), self.executor.outputs)}
         self.executor.forward(is_train=True)
         self.executor.backward()

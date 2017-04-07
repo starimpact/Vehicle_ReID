@@ -118,10 +118,12 @@ class Proxy_Metric(metric.EvalMetric):
 #    pass
 
   def update(self, labels, preds):
+    print '=========%d========='%(self.p_inst)
     self.p_inst += 1
     if self.p_inst%self.saveperiod==0:
       self.num_inst += 1
       loss = preds[0].asnumpy().mean()
+      print 'metric', loss
       self.sum_metric += loss
     
 
@@ -132,15 +134,15 @@ def Do_Proxy_NCA_Train2():
   logger = logging.getLogger()
   logger.setLevel(logging.INFO)
   
-#  ctxs = [mx.gpu(0), mx.gpu(1), mx.gpu(2), mx.gpu(3)]
-  ctxs = [mx.gpu(0), mx.gpu(1), mx.gpu(3)]
+  ctxs = [mx.gpu(0), mx.gpu(1), mx.gpu(2), mx.gpu(3)]
+#  ctxs = [mx.gpu(0), mx.gpu(1), mx.gpu(3)]
 #  ctxs = [mx.gpu(0), mx.gpu(1)]
-#  ctxs = [mx.gpu(0)]
+  ctxs = [mx.gpu(0)]
   
   devicenum = len(ctxs) 
 
   num_epoch = 10000
-  batch_size = 32*devicenum
+  batch_size = 40*devicenum
   show_period = 1000
 
   assert(batch_size%devicenum==0)
@@ -149,7 +151,7 @@ def Do_Proxy_NCA_Train2():
   bucket_key = bsz_per_device
 
   featdim = 128
-  proxy_num = 43928
+  proxy_num = 500#43928
   clsnum = proxy_num
   data_shape = (batch_size, 3, 299, 299)
   proxy_yM_shape = (batch_size, proxy_num)
@@ -158,7 +160,7 @@ def Do_Proxy_NCA_Train2():
   label_shape = dict(zip(['proxy_yM', 'proxy_ZM'], [proxy_yM_shape, proxy_ZM_shape]))
   proxyfn = 'proxy.bin'
   datafn = '/home/mingzhang/data/car_ReID_for_zhangming/data_each.list' #43928 calss number.
-#  datafn = '/home/mingzhang/data/car_ReID_for_zhangming/data_each.500.list'
+  datafn = '/home/mingzhang/data/car_ReID_for_zhangming/data_each.500.list'
 #  data_train = CarReID_Proxy2_Iter(['data'], [data_shape], ['proxy_yM', 'proxy_ZM'], [proxy_yM_shape, proxy_ZM_shape], datafn, bucket_key)
   data_train = CarReID_Proxy_Mxnet_Iter(['data'], [data_shape], ['proxy_yM', 'proxy_ZM'], [proxy_yM_shape, proxy_ZM_shape], datafn, bucket_key)
   
@@ -178,37 +180,65 @@ def Do_Proxy_NCA_Train2():
   param_prefix = 'MDL_PARAM/params2_proxy_nca/car_reid'
 
   reid_net = proxy_nca_model.CreateModel_Color2(None, bsz_per_device, proxy_num, data_shape[2:])
+  reid_net_p = proxy_nca_model.CreateModel_Color2_P(None, bsz_per_device, proxy_num, data_shape[2:])
 
 
   reid_model = mx.mod.Module(context=ctxs, symbol=reid_net, 
                              label_names=['proxy_yM', 'proxy_ZM'])
+  reid_model_P = mx.mod.Module(context=mx.gpu(1), symbol=reid_net_p, 
+                             label_names=['proxy_yM', 'proxy_ZM'])
+
+  reid_model_P.bind(data_shapes=data_train.provide_data, 
+                    label_shapes=data_train.provide_label,
+                    for_training=False)
 
 
   optimizer_params={'learning_rate':0.1,
                     'momentum':0.9,
-                    'wd':0.00005,
+                    'wd':0.0005,
                     'lr_scheduler':lr_scheduler,
                     'clip_gradient':None,
-                    'rescale_grad': 1.0}
+                    'rescale_grad': 1.0/batch_size}
 
   proxy_metric = Proxy_Metric()
 
-  if True:
-    fn = param_prefix + '_0_' + '.bin'
+  if False:
+    fn = param_prefix + '_2_' + '.bin'
     reid_model.bind(data_shapes=data_train.provide_data, 
                     label_shapes=data_train.provide_label)
     reid_model.load_params(fn)
     print 'loaded parameters from', fn
+
+
+  def norm_stat(d):
+    return mx.nd.norm(d)/np.sqrt(d.size)
+
+  mon = mx.mon.Monitor(1, norm_stat, 
+                       pattern='.*part1_fc1.*|.*proxy_Z_weight.*')
 
   def batch_end_call(*args, **kwargs):
   #  print eval_metric.loss_list
     epoch = args[0].epoch
     nbatch = args[0].nbatch + 1
     eval_metric = args[0].eval_metric
-    if nbatch%show_period==0:
-       fn = param_prefix + '_' + str(epoch%4) + '_' + '.bin'
-       reid_model.save_params(fn)
-       print 'saved parameters into', fn
+    data_batch = args[0].locals['data_batch']  
+    if True or nbatch%show_period==0:
+#       fn = param_prefix + '_' + str(epoch%4) + '_' + '.bin'
+#       reid_model.save_params(fn)
+#       print 'saved parameters into', fn
+       args, auxs = reid_model.get_params()
+       proxy_Z = args['proxy_Z_weight'].asnumpy()
+       print 'z:', np.abs(proxy_Z).mean()
+       reid_model_P.set_params(args, auxs)
+       reid_model_P.forward(data_batch)
+       outs = reid_model_P.get_outputs()
+       val = outs[1].asnumpy()
+       val2 = outs[2].asnumpy()
+       val3 = outs[3].asnumpy()
+       val4 = outs[4].asnumpy()
+       print 'fc1:', np.abs(val).mean(), 'z:', val2.mean(), 'y:', val3, 'one_proxy:', np.abs(val4).mean(), val2[val2>val1]
+#       args, auxs = reid_model.get_params()
+#       print np.mean(args['proxy_Z_weight'].asnumpy())
 #      eval_metric.reset()
 
   batch_end_calls = [batch_end_call, mx.callback.Speedometer(batch_size, show_period/10)]
@@ -218,7 +248,7 @@ def Do_Proxy_NCA_Train2():
                  initializer=mx.init.Normal(),
                  begin_epoch=0, num_epoch=num_epoch, 
                  eval_end_callback=None,
-                 kvstore=None,
+                 kvstore=None, monitor=mon,
                  batch_end_callback=batch_end_calls) 
 
 
