@@ -486,7 +486,8 @@ def get_data_label_proxy_mxnet(data_infos, label_infos, datalist, data_rndidx, b
     carid = int(onecar['id'])
     carson = onecar['son']
     tmpath = carpath+'/'+carson
-    son = mx.image.imdecode(open(tmpath).read())
+#    son = mx.image.imdecode(open(tmpath).read())
+    son = cv2.imread(tmpath)
     imgs.append(son)
 
   #ready same data
@@ -495,7 +496,7 @@ def get_data_label_proxy_mxnet(data_infos, label_infos, datalist, data_rndidx, b
     carid = int(onecar['id'])
    
     son = imgs[si] 
-    son = son.asnumpy()
+#    son = son.asnumpy()
 #    print son.shape
     if rndcrop:
       son = get_rnd_crop(son)

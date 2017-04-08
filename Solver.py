@@ -189,8 +189,8 @@ class CarReID_Proxy_Solver(object):
     for key in args:
       arr = args[key]
       if key.endswith('_weight'):
-        self.initializer(mx.init.InitDesc(key), arr) 
-#        self.initializer(key, arr) 
+#        self.initializer(mx.init.InitDesc(key), arr) 
+        self.initializer(key, arr) 
       if key.endswith('_bias'):
         arr[:] = 0.0
       if key.endswith('_gamma'):

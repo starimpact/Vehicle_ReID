@@ -118,12 +118,12 @@ class Proxy_Metric(metric.EvalMetric):
 #    pass
 
   def update(self, labels, preds):
-    print '=========%d========='%(self.p_inst)
+#    print '=========%d========='%(self.p_inst)
     self.p_inst += 1
     if self.p_inst%self.saveperiod==0:
       self.num_inst += 1
       loss = preds[0].asnumpy().mean()
-      print 'metric', loss
+#      print 'metric', loss
       self.sum_metric += loss
     
 
@@ -137,12 +137,12 @@ def Do_Proxy_NCA_Train2():
   ctxs = [mx.gpu(0), mx.gpu(1), mx.gpu(2), mx.gpu(3)]
 #  ctxs = [mx.gpu(0), mx.gpu(1), mx.gpu(3)]
 #  ctxs = [mx.gpu(0), mx.gpu(1)]
-  ctxs = [mx.gpu(0)]
+#  ctxs = [mx.gpu(1)]
   
   devicenum = len(ctxs) 
 
   num_epoch = 10000
-  batch_size = 40*devicenum
+  batch_size = 32*devicenum
   show_period = 1000
 
   assert(batch_size%devicenum==0)
@@ -151,7 +151,7 @@ def Do_Proxy_NCA_Train2():
   bucket_key = bsz_per_device
 
   featdim = 128
-  proxy_num = 500#43928
+  proxy_num = 43928
   clsnum = proxy_num
   data_shape = (batch_size, 3, 299, 299)
   proxy_yM_shape = (batch_size, proxy_num)
@@ -160,7 +160,7 @@ def Do_Proxy_NCA_Train2():
   label_shape = dict(zip(['proxy_yM', 'proxy_ZM'], [proxy_yM_shape, proxy_ZM_shape]))
   proxyfn = 'proxy.bin'
   datafn = '/home/mingzhang/data/car_ReID_for_zhangming/data_each.list' #43928 calss number.
-  datafn = '/home/mingzhang/data/car_ReID_for_zhangming/data_each.500.list'
+#  datafn = '/home/mingzhang/data/car_ReID_for_zhangming/data_each.500.list'
 #  data_train = CarReID_Proxy2_Iter(['data'], [data_shape], ['proxy_yM', 'proxy_ZM'], [proxy_yM_shape, proxy_ZM_shape], datafn, bucket_key)
   data_train = CarReID_Proxy_Mxnet_Iter(['data'], [data_shape], ['proxy_yM', 'proxy_ZM'], [proxy_yM_shape, proxy_ZM_shape], datafn, bucket_key)
   
@@ -202,8 +202,8 @@ def Do_Proxy_NCA_Train2():
 
   proxy_metric = Proxy_Metric()
 
-  if False:
-    fn = param_prefix + '_2_' + '.bin'
+  if True:
+    fn = param_prefix + '_0_' + '.bin'
     reid_model.bind(data_shapes=data_train.provide_data, 
                     label_shapes=data_train.provide_label)
     reid_model.load_params(fn)
@@ -222,10 +222,10 @@ def Do_Proxy_NCA_Train2():
     nbatch = args[0].nbatch + 1
     eval_metric = args[0].eval_metric
     data_batch = args[0].locals['data_batch']  
-    if False or nbatch%show_period==0:
-#       fn = param_prefix + '_' + str(epoch%4) + '_' + '.bin'
-#       reid_model.save_params(fn)
-#       print 'saved parameters into', fn
+    if nbatch%show_period==0:
+       fn = param_prefix + '_' + str(epoch%4) + '_' + '.bin'
+       reid_model.save_params(fn)
+       print 'saved parameters into', fn
        if False:
          args, auxs = reid_model.get_params()
          proxy_Z = args['proxy_Z_weight'].asnumpy()
