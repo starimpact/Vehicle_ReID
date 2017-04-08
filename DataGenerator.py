@@ -18,6 +18,13 @@ def get_datalist(datafn):
   return datalist
 
 
+def get_datalist2(datafn_list):
+  datalist = []
+  for datafn in datafn_list:
+    datalist += get_datalist(datafn) 
+  return datalist
+
+
 def get_proxyset(proxyfn, proxyshape):
   proxy_set = []
   if os.path.isfile(proxyfn):
@@ -448,7 +455,7 @@ def get_normalization(img):
 
   return nimg
 
-
+#format: path,imgname
 def get_data_label_proxy_mxnet(data_infos, label_infos, datalist, data_rndidx, batch_now, 
                    rndcrop=True, rndcont=False, rndnoise=False, rndrotate=True,
                    rndhflip=True, normalize=True):
@@ -467,6 +474,85 @@ def get_data_label_proxy_mxnet(data_infos, label_infos, datalist, data_rndidx, b
     parts = onedata.split(',')
     onecar['path'] = parts[0]
     onecar['id'] = parts[0].split('/')[-1]
+#    print onecar['id']
+    onecar['son'] = parts[1]
+    cars.append(onecar)
+
+  stdsize = data_infos[0][1][2:]
+  dataidx = 0
+  datas = {}
+  labels = {}
+  datas['data'] = np.zeros(data_infos[0][1], dtype=np.float32)
+  labels['proxy_yM'] = np.zeros(label_infos[0][1], dtype=np.float32)
+  labels['proxy_ZM'] = np.ones(label_infos[1][1], dtype=np.float32)
+  
+  imgs = []
+  for si in xrange(batchsize):
+    onecar = cars[si]
+    carpath = onecar['path']
+    carid = int(onecar['id'])
+    carson = onecar['son']
+    tmpath = carpath+'/'+carson
+#    son = mx.image.imdecode(open(tmpath).read())
+    son = cv2.imread(tmpath)
+    imgs.append(son)
+
+  #ready same data
+  for si in xrange(batchsize):
+    onecar = cars[si]
+    carid = int(onecar['id'])
+   
+    son = imgs[si] 
+#    son = son.asnumpy()
+#    print son.shape
+    if rndcrop:
+      son = get_rnd_crop(son)
+#    print 0, tmpath, son0.shape, stdsize
+    stdson = cv2.resize(son, (stdsize[1], stdsize[0]))
+    stdson = stdson.astype(np.float32) / 255.0
+    if rndcont:
+      stdson = get_rnd_contrast(stdson)
+    if rndnoise:
+      stdson = get_rnd_noise(stdson)
+    if normalize:
+      stdson = get_normalization(stdson)
+    if rndrotate:
+      stdson = get_rnd_rotate(stdson)
+    if rndhflip:
+      stdson = get_rnd_hflip(stdson)
+#    print carid, stdson
+    datas['data'][si, 0] = stdson[:, :, 0]
+    datas['data'][si, 1] = stdson[:, :, 1]
+    datas['data'][si, 2] = stdson[:, :, 2]
+    labels['proxy_yM'][si, carid] = 1
+    labels['proxy_ZM'][si, carid] = 0
+    if False:
+      imgsave = (stdson*255).astype(np.uint8)
+      cv2.imwrite('tmpimg/stdson%d.jpg'%(int(carid)), imgsave)
+  datas_nd = [mx.nd.array(datas['data'])]
+  label_nd = [mx.nd.array(labels['proxy_yM']), mx.nd.array(labels['proxy_ZM'])]
+  return datas_nd, label_nd
+
+
+#format: path,imgname,idnumber
+def get_data_label_proxy_mxnet2(data_infos, label_infos, datalist, data_rndidx, batch_now, 
+                   rndcrop=True, rndcont=False, rndnoise=False, rndrotate=True,
+                   rndhflip=True, normalize=True):
+#  print label_infos
+  labelshape = label_infos[0][1]
+  batchsize = labelshape[0]
+  if (batch_now+1)*batchsize > len(datalist):
+    return None
+  
+  data_batch = []
+  for idx in data_rndidx[batch_now*batchsize:(batch_now+1)*batchsize]:
+    data_batch.append(datalist[idx])
+  cars = []
+  for onedata in data_batch:
+    onecar = {}
+    parts = onedata.split(',')
+    onecar['path'] = parts[0]
+    onecar['id'] = parts[2]
 #    print onecar['id']
     onecar['son'] = parts[1]
     cars.append(onecar)
