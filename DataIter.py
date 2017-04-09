@@ -434,6 +434,75 @@ class CarReID_Proxy_Mxnet_Iter2(mx.io.DataIter):
       raise StopIteration
 
 
+class CarReID_Proxy_Batch_Mxnet_Iter2(mx.io.DataIter):
+  def __init__(self, data_names, data_shapes, label_names, label_shapes, datafn, proxy_batchsize):
+    super(CarReID_Proxy_Batch_Mxnet_Iter2, self).__init__()
+
+    self.batch_size = data_shapes[0][0]
+    self._provide_data = zip(data_names, data_shapes)
+    self._provide_label = zip(label_names, label_shapes)
+    self.cur_batch = 0
+#    self.datas_labels = self.data_label_gen(self._provide_data, self._provide_label) 
+    self.datalist = dg.get_datalist2(datafn)
+    self.datalen = len(self.datalist)
+    self.labeldict = dict(self._provide_label)
+    self.proxy_batchsize = proxy_batchsize
+    self.rndidx_list = None 
+    self.num_batches = self.proxy_batchsize / label_shapes[0][0]
+    self.do_reset()
+    self.batch_carids = []
+
+  def __iter__(self):
+    return self
+
+  def reset(self):
+    self.cur_batch = 0        
+    self.batch_carids = []
+    pass
+
+  def do_reset(self):
+    print 'getting another proxy batch to train(%d/%d)...'%(self.proxy_batchsize, self.datalen)
+    self.cur_batch = 0        
+    self.batch_carids = []
+    self.rndidx_list = np.random.permutation(self.datalen)
+    self.proxy_datalist = []
+    carids = {}
+    for i in xrange(self.proxy_batchsize):
+      onedata = self.datalist[i] 
+      parts = onedata.split(',')
+      path = parts[0]
+      son = parts[1]
+      carid = parts[2]
+      if not carids.has_key(carid):
+        carids[carid] = len(carids)
+      proxyid = carids[carid] 
+      proxy_str = path + ',' + son + ',' + str(proxyid)
+      self.proxy_datalist.append(proxy_str)
+    return len(carids)
+
+  def __next__(self):
+    return self.next()
+
+  @property
+  def provide_data(self):
+    return self._provide_data
+
+  @property
+  def provide_label(self):
+    return self._provide_label
+
+
+  def next(self):
+    if self.cur_batch < self.num_batches:
+      datas, labels, carids = dg.get_data_label_proxy_batch_mxnet(self._provide_data, self._provide_label, self.proxy_datalist, self.cur_batch) 
+      self.batch_carids = carids
+      self.cur_batch += 1
+      return mx.io.DataBatch(datas, labels)
+    else:
+      raise StopIteration
+
+
+
 
 if __name__=='__main__':
   print 'testing DataIter.py...'
