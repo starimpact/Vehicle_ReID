@@ -3,8 +3,7 @@ import numpy as np
 import mxnet as mx
 from mxnet import metric
 
-from DataIter import CarReID_Iter, CarReID_Softmax_Iter, CarReID_Proxy2_Iter, CarReID_Proxy_Mxnet_Iter
-from DataIter import CarReID_Proxy_Mxnet_Iter2
+from DataIter import CarReID_Proxy_Batch_Mxnet_Iter
 from Solver import CarReID_Solver, CarReID_Softmax_Solver, CarReID_Proxy_Solver
 from MDL_PARAM import model2 as now_model
 from MDL_PARAM import model2_proxy_nca as proxy_nca_model
@@ -57,7 +56,8 @@ def Do_Proxy_NCA_Train2():
   bucket_key = bsz_per_device
 
   featdim = 128
-  proxy_num = 43928
+  proxy_batch = 100
+  proxy_num = proxy_batch
   clsnum = proxy_num
   data_shape = (batch_size, 3, 299, 299)
   proxy_yM_shape = (batch_size, proxy_num)
@@ -65,15 +65,15 @@ def Do_Proxy_NCA_Train2():
   proxy_ZM_shape = (batch_size, proxy_num)
   label_shape = dict(zip(['proxy_yM', 'proxy_ZM'], [proxy_yM_shape, proxy_ZM_shape]))
   proxyfn = 'proxy.bin'
-  datafn = '/home/mingzhang/data/car_ReID_for_zhangming/data_each.list' #43928 calss number.
-#  datafn = '/home/mingzhang/data/car_ReID_for_zhangming/data_each.500.list'
+#  datafn = '/home/mingzhang/data/car_ReID_for_zhangming/data_each.list' #43928 calss number.
+  datafn = '/home/mingzhang/data/car_ReID_for_zhangming/data_each.500.list'
 #  data_train = CarReID_Proxy2_Iter(['data'], [data_shape], ['proxy_yM', 'proxy_ZM'], [proxy_yM_shape, proxy_ZM_shape], datafn, bucket_key)
-  data_train = CarReID_Proxy_Mxnet_Iter(['data'], [data_shape], ['proxy_yM', 'proxy_ZM'], [proxy_yM_shape, proxy_ZM_shape], datafn, bucket_key)
+  data_train = CarReID_Proxy_Batch_Mxnet_Iter(['data'], [data_shape], ['proxy_yM', 'proxy_ZM'], [proxy_yM_shape, proxy_ZM_shape], datafn, proxy_batch)
   
   dlr = 200000/batch_size
 #  dlr_steps = [dlr, dlr*2, dlr*3, dlr*4]
 
-  lr_start = 0.2 * (10**-1)
+  lr_start = (10**-1)
   lr_min = 10**-6
   lr_reduce = 0.9
   lr_stepnum = np.log(lr_min/lr_start)/np.log(lr_reduce)
@@ -82,21 +82,20 @@ def Do_Proxy_NCA_Train2():
   print 'lr_start:%.1e, lr_min:%.1e, lr_reduce:%.2f, lr_stepsnum:%d'%(lr_start, lr_min, lr_reduce, lr_stepnum)
   print dlr_steps
   lr_scheduler = mx.lr_scheduler.MultiFactorScheduler(dlr_steps, lr_reduce)
-#  lr_scheduler = mx.lr_scheduler.FactorScheduler(dlr, 0.9)
   param_prefix = 'MDL_PARAM/params2_proxy_nca/car_reid'
 
   reid_net = proxy_nca_model.CreateModel_Color2(None, bsz_per_device, proxy_num, data_shape[2:])
-#  reid_net_p = proxy_nca_model.CreateModel_Color2_P(None, bsz_per_device, proxy_num, data_shape[2:])
+  reid_net_p = proxy_nca_model.CreateModel_Color_predict(None, bsz_per_device, proxy_num, data_shape[2:])
 
 
   reid_model = mx.mod.Module(context=ctxs, symbol=reid_net, 
                              label_names=['proxy_yM', 'proxy_ZM'])
-#  reid_model_P = mx.mod.Module(context=mx.gpu(1), symbol=reid_net_p, 
-#                             label_names=['proxy_yM', 'proxy_ZM'])
+  reid_model_P = mx.mod.Module(context=mx.gpu(0), symbol=reid_net_p, 
+                             label_names=['proxy_yM', 'proxy_ZM'])
 #
-#  reid_model_P.bind(data_shapes=data_train.provide_data, 
-#                    label_shapes=data_train.provide_label,
-#                    for_training=False)
+  reid_model_P.bind(data_shapes=data_train.provide_data, 
+                    label_shapes=data_train.provide_label,
+                    for_training=False)
 
 
   optimizer_params={'learning_rate':lr_start,
@@ -108,7 +107,7 @@ def Do_Proxy_NCA_Train2():
 
   proxy_metric = Proxy_Metric()
 
-  if True:
+  if False:
     fn = param_prefix + '_0_' + '.bin'
     reid_model.bind(data_shapes=data_train.provide_data, 
                     label_shapes=data_train.provide_label)
@@ -148,7 +147,27 @@ def Do_Proxy_NCA_Train2():
 #       args, auxs = reid_model.get_params()
 #       print np.mean(args['proxy_Z_weight'].asnumpy())
 
+  def epoch_end_call(epoch, symbol, arg_params, aux_params):
+    print 'hello end epoch...ready next proxy batch data and init the proxy_Z_weight...'
+    carnum = data_train.do_reset()
+
+    proxy_Z_weight = arg_params['proxy_Z_weight']
+    proxy_Zfeat = np.zeros((carnum, featdim), dtype=np.float32)
+    proxy_Znum = np.zeros((carnum, 1), dtype=np.int32)
+    for di, data in enumerate(data_train):
+      output = reid_bmodel_P.forward(data)
+      output = output.asnumpy()
+      batch_carids = data_train.batch_carids
+      for ri in xrange(data_train.batch_size):
+        carid = batch_carids[ri]
+        proxy_Zfeat[carid] += output[ri]
+        proxy_Znum[carid] += 1
+    proxy_Z_weight[:] = mx.nd.array(proxy_Zfeat/prox_Znum)
+    reid_model.set_params(arg_params, aux_params)
+    pass
+
   batch_end_calls = [batch_end_call, mx.callback.Speedometer(batch_size, show_period/10)]
+  epoch_all_alls = [epoch_end_call]
   reid_model.fit(train_data=data_train, eval_metric=proxy_metric,
                  optimizer='sgd',
                  optimizer_params=optimizer_params, 
@@ -156,7 +175,8 @@ def Do_Proxy_NCA_Train2():
                  begin_epoch=0, num_epoch=num_epoch, 
                  eval_end_callback=None,
                  kvstore=None,# monitor=mon,
-                 batch_end_callback=batch_end_calls) 
+                 batch_end_callback=batch_end_calls,
+                 epoch_end_callback=epoch_all_calls) 
 
 
   return 

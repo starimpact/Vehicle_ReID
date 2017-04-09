@@ -220,7 +220,7 @@ class CarReID_Compare_Predictor(object):
         cmp_scores = self.executor.outputs[0].asnumpy()
 #        print data_set.batchsize, data1.shape, data2.shape, np.sum(np.abs(data1 - data2)), np.sum(cmp_scores)
 #        print cmp_scores
-        print data1[0, 0], data2[500, 0]
+#        print data1[0, 0], data2[500, 0]
         if True:
           cmp_scores = np.sum(cmp_scores, axis=1)
 #          print data2.shape, cmp_scores

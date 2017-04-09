@@ -606,6 +606,12 @@ def CreateModel_Color_Split_test():
    return reid_feature, absdiff 
 
 
+def CreateModel_Color_predict():
+   data1 = mx.sym.Variable('part1_data')
+   args_all = None
+   reid_feature, args_all = create_inception_resnet_v2(data1, namepre='part1', args=args_all)
+   return reid_feature 
+
 
 if __name__=="__main__":
   draw_inception_renet_v2()
