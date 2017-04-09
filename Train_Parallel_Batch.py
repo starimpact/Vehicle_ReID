@@ -47,9 +47,9 @@ def Do_Proxy_NCA_Train2():
   
   devicenum = len(ctxs) 
 
-  num_epoch = 10000
-  batch_size = 32*devicenum
-  show_period = 1000
+  num_epoch = 1000000
+  batch_size = 48*devicenum
+  show_period = 400
 
   assert(batch_size%devicenum==0)
   bsz_per_device = batch_size / devicenum
@@ -58,7 +58,7 @@ def Do_Proxy_NCA_Train2():
 
   featdim = 128
   proxy_batch = 10000
-  proxy_num = proxy_batch/4
+  proxy_num = proxy_batch
   clsnum = proxy_num
   data_shape = (batch_size, 3, 299, 299)
   proxy_yM_shape = (batch_size, proxy_num)
@@ -212,9 +212,9 @@ def Do_Proxy_NCA_Train3():
   
   devicenum = len(ctxs) 
 
-  num_epoch = 10000
+  num_epoch = 1000000
   batch_size = 48*devicenum
-  show_period = 1000
+  show_period = 400
 
   assert(batch_size%devicenum==0)
   bsz_per_device = batch_size / devicenum
@@ -222,8 +222,8 @@ def Do_Proxy_NCA_Train3():
   bucket_key = bsz_per_device
 
   featdim = 128
-  proxy_batch = 20000
-  proxy_num = proxy_batch/4
+  proxy_batch = 10000
+  proxy_num = proxy_batch
   clsnum = proxy_num
   data_shape = (batch_size, 3, 299, 299)
   proxy_yM_shape = (batch_size, proxy_num)
@@ -369,7 +369,7 @@ def Do_Proxy_NCA_Train3():
 if __name__=='__main__':
 #  Do_Train()
 #  Do_Proxy_NCA_Train()
-#  Do_Proxy_NCA_Train2()
-  Do_Proxy_NCA_Train3()
+  Do_Proxy_NCA_Train2()
+#  Do_Proxy_NCA_Train3()
 
 
