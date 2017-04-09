@@ -39,10 +39,10 @@ def Do_Proxy_NCA_Train2():
   logger = logging.getLogger()
   logger.setLevel(logging.INFO)
   
-  ctxs = [mx.gpu(0), mx.gpu(1), mx.gpu(2), mx.gpu(3)]
-#  ctxs = [mx.gpu(0), mx.gpu(1), mx.gpu(3)]
+#  ctxs = [mx.gpu(0), mx.gpu(1), mx.gpu(2), mx.gpu(3)]
+  ctxs = [mx.gpu(2), mx.gpu(1), mx.gpu(3)]
 #  ctxs = [mx.gpu(0), mx.gpu(1)]
-  ctxs = [mx.gpu(1)]
+#  ctxs = [mx.gpu(0)]
   
   devicenum = len(ctxs) 
 
@@ -56,8 +56,8 @@ def Do_Proxy_NCA_Train2():
   bucket_key = bsz_per_device
 
   featdim = 128
-  proxy_batch = 100
-  proxy_num = proxy_batch
+  proxy_batch = 10000
+  proxy_num = proxy_batch/4
   clsnum = proxy_num
   data_shape = (batch_size, 3, 299, 299)
   proxy_yM_shape = (batch_size, proxy_num)
@@ -65,8 +65,8 @@ def Do_Proxy_NCA_Train2():
   proxy_ZM_shape = (batch_size, proxy_num)
   label_shape = dict(zip(['proxy_yM', 'proxy_ZM'], [proxy_yM_shape, proxy_ZM_shape]))
   proxyfn = 'proxy.bin'
-#  datafn = '/home/mingzhang/data/car_ReID_for_zhangming/data_each.list' #43928 calss number.
-  datafn = '/home/mingzhang/data/car_ReID_for_zhangming/data_each.500.list'
+  datafn = '/home/mingzhang/data/car_ReID_for_zhangming/data_each.list' #43928 calss number.
+#  datafn = '/home/mingzhang/data/car_ReID_for_zhangming/data_each.500.list'
 #  data_train = CarReID_Proxy2_Iter(['data'], [data_shape], ['proxy_yM', 'proxy_ZM'], [proxy_yM_shape, proxy_ZM_shape], datafn, bucket_key)
   data_train = CarReID_Proxy_Batch_Mxnet_Iter(['data'], [data_shape], ['proxy_yM', 'proxy_ZM'], [proxy_yM_shape, proxy_ZM_shape], datafn, proxy_batch)
   
@@ -147,7 +147,7 @@ def Do_Proxy_NCA_Train2():
   reid_model_P.init_params()
   arg_params_p, aux_params_p = reid_model_P.get_params()
   def epoch_end_call(epoch, symbol, arg_params, aux_params):
-    print len(arg_params), len(arg_params_p)
+#    print len(arg_params), len(arg_params_p)
     reid_model_P.set_params(arg_params, aux_params)
     carnum = data_train.do_reset()
 
@@ -155,22 +155,26 @@ def Do_Proxy_NCA_Train2():
 
     proxy_Z_weight = arg_params['proxy_Z_weight']
     proxy_num, featdim = proxy_Z_weight.shape
-    proxy_Zfeat = np.ones((proxy_num, featdim), dtype=np.float32)*10**-5
-    proxy_Znum = np.zeros((proxy_num, 1), dtype=np.int32)
+#    proxy_Zfeat = np.ones((proxy_num, featdim), dtype=np.float32)*10**-5
+#    proxy_Znum = np.zeros((proxy_num, 1), dtype=np.int32)
+    proxy_Zfeat = None
+    proxy_Znum = None
     for di, data in enumerate(data_train):
       output = reid_model_P.forward(data, is_train=False)
-      output = reid_model_P.get_outputs()[0].asnumpy()
+      output = reid_model_P.get_outputs()[0]
+      ctx = output.context
+      if proxy_Zfeat is None:
+        proxy_Zfeat = mx.nd.ones((proxy_num, featdim), dtype=np.float32, ctx=ctx)*10**-5
+        proxy_Znum = mx.nd.zeros((proxy_num, 1), dtype=np.float32, ctx=ctx) + 10**-5
       batch_carids = data_train.batch_carids
       for ri in xrange(data_train.batch_size):
         carid = batch_carids[ri]
         proxy_Zfeat[carid] += output[ri]
         proxy_Znum[carid] += 1
-    print proxy_Znum.T
-    print proxy_Zfeat
     proxy_Znum[proxy_Znum==0] = 1
-    proxy_Zfeat /= proxy_Znum
-    print np.mean(proxy_Zfeat)
-    proxy_Z_weight[:] = proxy_Zfeat 
+#    proxy_Zfeat /= proxy_Znum
+    proxy_Zfeat = mx.nd.broadcast_div(proxy_Zfeat, proxy_Znum)
+    proxy_Zfeat.copyto(proxy_Z_weight)
     reid_model.set_params(arg_params, aux_params)
     pass
 
