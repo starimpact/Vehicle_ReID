@@ -323,7 +323,7 @@ class CarReID_Proxy_Mxnet_Iter(mx.io.DataIter):
 
 class CarReID_Proxy_Batch_Mxnet_Iter(mx.io.DataIter):
   def __init__(self, data_names, data_shapes, label_names, label_shapes, datafn, proxy_batchsize):
-    super(CarReID_Proxy_Mxnet_Iter, self).__init__()
+    super(CarReID_Proxy_Batch_Mxnet_Iter, self).__init__()
 
     self.batch_size = data_shapes[0][0]
     self._provide_data = zip(data_names, data_shapes)
@@ -347,7 +347,7 @@ class CarReID_Proxy_Batch_Mxnet_Iter(mx.io.DataIter):
     self.batch_carids = []
     pass
 
-  def do_reset(self)
+  def do_reset(self):
     print 'getting another proxy batch to train(%d/%d)...'%(self.proxy_batchsize, self.datalen)
     self.cur_batch = 0        
     self.batch_carids = []
@@ -358,14 +358,14 @@ class CarReID_Proxy_Batch_Mxnet_Iter(mx.io.DataIter):
       onedata = self.datalist[i] 
       parts = onedata.split(',')
       path = parts[0]
-      son = partsx[1]
+      son = parts[1]
       carid = parts[0].split('/')[-1]
       if not carids.has_key(carid):
         carids[carid] = len(carids)
       proxyid = carids[carid] 
       proxy_str = path + ',' + son + ',' + str(proxyid)
       self.proxy_datalist.append(proxy_str)
-  return len(carids)
+    return len(carids)
 
   def __next__(self):
     return self.next()

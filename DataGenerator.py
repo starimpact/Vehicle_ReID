@@ -625,7 +625,7 @@ def get_data_label_proxy_batch_mxnet(data_infos, label_infos, datalist, batch_no
   
   data_batch = []
   idlist = []
-  for idx in xrange[batch_now*batchsize, (batch_now+1)*batchsize]:
+  for idx in xrange(batch_now*batchsize, (batch_now+1)*batchsize):
     data_batch.append(datalist[idx])
     idlist.append(idx)
   cars = []
