@@ -148,6 +148,10 @@ def Do_Proxy_NCA_Train2():
   reid_model_P.init_params()
   arg_params_p, aux_params_p = reid_model_P.get_params()
   def epoch_end_call(epoch, symbol, arg_params, aux_params):
+    if True:
+       fn = param_prefix + '_' + str(epoch%4) + '_' + '.bin'
+       reid_model.save_params(fn)
+       print 'saved parameters into', fn
 #    print len(arg_params), len(arg_params_p)
     reid_model_P.set_params(arg_params, aux_params)
     carnum = data_train.do_reset()
@@ -209,7 +213,7 @@ def Do_Proxy_NCA_Train3():
   devicenum = len(ctxs) 
 
   num_epoch = 10000
-  batch_size = 56*devicenum
+  batch_size = 48*devicenum
   show_period = 1000
 
   assert(batch_size%devicenum==0)
@@ -218,7 +222,7 @@ def Do_Proxy_NCA_Train3():
   bucket_key = bsz_per_device
 
   featdim = 128
-  proxy_batch = 10000
+  proxy_batch = 20000
   proxy_num = proxy_batch/4
   clsnum = proxy_num
   data_shape = (batch_size, 3, 299, 299)
@@ -310,6 +314,10 @@ def Do_Proxy_NCA_Train3():
   reid_model_P.init_params()
   arg_params_p, aux_params_p = reid_model_P.get_params()
   def epoch_end_call(epoch, symbol, arg_params, aux_params):
+    if True:
+       fn = param_prefix + '_' + str(epoch%4) + '_' + '.bin'
+       reid_model.save_params(fn)
+       print 'saved parameters into', fn
 #    print len(arg_params), len(arg_params_p)
     reid_model_P.set_params(arg_params, aux_params)
     carnum = data_train.do_reset()
