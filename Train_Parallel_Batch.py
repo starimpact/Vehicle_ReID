@@ -151,12 +151,11 @@ def Do_Proxy_NCA_Train2():
     reid_model_P.set_params(arg_params, aux_params)
     carnum = data_train.do_reset()
 
-    print 'hello end epoch...ready next proxy batch data and init the proxy_Z_weight...'
+    print 'hello end epoch...ready next proxy batch data and init the proxy_Z_weight...cars id number:%d, proxy_num=%d, proxy_batchsize=%d'%(carnum, proxy_num, proxy_batch)
 
     proxy_Z_weight = arg_params['proxy_Z_weight']
-    proxy_num, featdim = proxy_Z_weight.shape
-#    proxy_Zfeat = np.ones((proxy_num, featdim), dtype=np.float32)*10**-5
-#    proxy_Znum = np.zeros((proxy_num, 1), dtype=np.int32)
+    pxy_num, ftdim = proxy_Z_weight.shape
+
     proxy_Zfeat = None
     proxy_Znum = None
     for di, data in enumerate(data_train):
@@ -164,8 +163,8 @@ def Do_Proxy_NCA_Train2():
       output = reid_model_P.get_outputs()[0]
       ctx = output.context
       if proxy_Zfeat is None:
-        proxy_Zfeat = mx.nd.ones((proxy_num, featdim), dtype=np.float32, ctx=ctx)*10**-5
-        proxy_Znum = mx.nd.zeros((proxy_num, 1), dtype=np.float32, ctx=ctx) + 10**-5
+        proxy_Zfeat = mx.nd.ones((pxy_num, ftdim), dtype=np.float32, ctx=ctx)*10**-5
+        proxy_Znum = mx.nd.zeros((pxy_num, 1), dtype=np.float32, ctx=ctx) + 10**-5
       batch_carids = data_train.batch_carids
       for ri in xrange(data_train.batch_size):
         carid = batch_carids[ri]
