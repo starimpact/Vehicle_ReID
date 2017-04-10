@@ -33,6 +33,46 @@ class Proxy_Metric(metric.EvalMetric):
       self.sum_metric += loss
     
 
+def do_epoch_end_call(param_prefix, epoch, reid_model, \
+                      arg_params, aux_params, \
+                      reid_model_P, data_train, \
+                      proxy_num, proxy_batch):
+    if True:
+       fn = param_prefix + '_' + str(epoch%4) + '_' + '.bin'
+       reid_model.save_params(fn)
+       print 'saved parameters into', fn
+    reid_model_P.set_params(arg_params, aux_params)
+    carnum = data_train.do_reset()
+
+    print 'hello end epoch...ready next proxy batch data and init the proxy_Z_weight...cars id number:%d, proxy_num=%d, proxy_batchsize=%d'%(carnum, proxy_num, proxy_batch)
+
+    proxy_Z_weight = arg_params['proxy_Z_weight']
+    pxy_num, ftdim = proxy_Z_weight.shape
+
+    proxy_Zfeat = None
+    proxy_Znum = None
+    for di, data in enumerate(data_train):
+      output = reid_model_P.forward(data, is_train=False)
+      output = reid_model_P.get_outputs()[0]
+      ctx = output.context
+      if proxy_Zfeat is None:
+        proxy_Zfeat = mx.nd.ones((pxy_num, ftdim), dtype=np.float32, ctx=ctx)*10**-5
+        proxy_Znum = mx.nd.zeros((pxy_num, 1), dtype=np.float32, ctx=ctx) + 10**-5
+      batch_carids = data_train.batch_carids
+      for ri in xrange(data_train.batch_size):
+        carid = batch_carids[ri]
+        proxy_Zfeat[carid] += output[ri]
+        proxy_Znum[carid] += 1
+    proxy_Znum[proxy_Znum==0] = 1
+#    proxy_Zfeat /= proxy_Znum
+    proxy_Zfeat = mx.nd.broadcast_div(proxy_Zfeat, proxy_Znum)
+    proxy_Zfeat.copyto(proxy_Z_weight)
+    reid_model.set_params(arg_params, aux_params)
+    data_train.reset()
+    pass
+
+
+
 def Do_Proxy_NCA_Train2():
   print 'Proxy NCA Training...'
 
@@ -74,7 +114,7 @@ def Do_Proxy_NCA_Train2():
   dlr = 200000/batch_size
 #  dlr_steps = [dlr, dlr*2, dlr*3, dlr*4]
 
-  lr_start = (10**-1)
+  lr_start = (10**-1)*0.1
   lr_min = 10**-6
   lr_reduce = 0.9
   lr_stepnum = np.log(lr_min/lr_start)/np.log(lr_reduce)
@@ -105,13 +145,6 @@ def Do_Proxy_NCA_Train2():
 
   proxy_metric = Proxy_Metric()
 
-  if False:
-    fn = param_prefix + '_0_' + '.bin'
-    reid_model.bind(data_shapes=data_train.provide_data, 
-                    label_shapes=data_train.provide_label)
-    reid_model.load_params(fn)
-    print 'loaded parameters from', fn
-
 
   def norm_stat(d):
     return mx.nd.norm(d)/np.sqrt(d.size)
@@ -130,57 +163,22 @@ def Do_Proxy_NCA_Train2():
        reid_model.save_params(fn)
        print 'saved parameters into', fn
        eval_metric.reset()
-       if False:
-         args, auxs = reid_model.get_params()
-         proxy_Z = args['proxy_Z_weight'].asnumpy()
-         print 'z:', np.abs(proxy_Z).mean()
-         reid_model_P.set_params(args, auxs)
-         reid_model_P.forward(data_batch)
-         outs = reid_model_P.get_outputs()
-         val = outs[1].asnumpy()
-         val2 = outs[2].asnumpy()
-         val3 = outs[3].asnumpy()
-         val4 = outs[4].asnumpy()
-         print 'fc1:', np.abs(val).mean(), 'z:', val2.mean(), 'y:', val3, 'one_proxy:', np.abs(val4).mean(), val2[val2>val1]
-#       args, auxs = reid_model.get_params()
-#       print np.mean(args['proxy_Z_weight'].asnumpy())
 
   reid_model_P.init_params()
-  arg_params_p, aux_params_p = reid_model_P.get_params()
   def epoch_end_call(epoch, symbol, arg_params, aux_params):
-    if True:
-       fn = param_prefix + '_' + str(epoch%4) + '_' + '.bin'
-       reid_model.save_params(fn)
-       print 'saved parameters into', fn
-#    print len(arg_params), len(arg_params_p)
-    reid_model_P.set_params(arg_params, aux_params)
-    carnum = data_train.do_reset()
+    do_epoch_end_call(param_prefix, epoch, reid_model, \
+                      arg_params, aux_params, \
+                      reid_model_P, data_train,\
+                      proxy_num, proxy_batch)
 
-    print 'hello end epoch...ready next proxy batch data and init the proxy_Z_weight...cars id number:%d, proxy_num=%d, proxy_batchsize=%d'%(carnum, proxy_num, proxy_batch)
-
-    proxy_Z_weight = arg_params['proxy_Z_weight']
-    pxy_num, ftdim = proxy_Z_weight.shape
-
-    proxy_Zfeat = None
-    proxy_Znum = None
-    for di, data in enumerate(data_train):
-      output = reid_model_P.forward(data, is_train=False)
-      output = reid_model_P.get_outputs()[0]
-      ctx = output.context
-      if proxy_Zfeat is None:
-        proxy_Zfeat = mx.nd.ones((pxy_num, ftdim), dtype=np.float32, ctx=ctx)*10**-5
-        proxy_Znum = mx.nd.zeros((pxy_num, 1), dtype=np.float32, ctx=ctx) + 10**-5
-      batch_carids = data_train.batch_carids
-      for ri in xrange(data_train.batch_size):
-        carid = batch_carids[ri]
-        proxy_Zfeat[carid] += output[ri]
-        proxy_Znum[carid] += 1
-    proxy_Znum[proxy_Znum==0] = 1
-#    proxy_Zfeat /= proxy_Znum
-    proxy_Zfeat = mx.nd.broadcast_div(proxy_Zfeat, proxy_Znum)
-    proxy_Zfeat.copyto(proxy_Z_weight)
-    reid_model.set_params(arg_params, aux_params)
-    pass
+  if True:
+    fn = param_prefix + '_0_' + '.bin'
+    reid_model.bind(data_shapes=data_train.provide_data, 
+                    label_shapes=data_train.provide_label)
+    reid_model.load_params(fn)
+    arg_params, aux_params = reid_model.get_params()
+    epoch_end_call(0, None, arg_params, aux_params)
+    print 'loaded parameters from', fn
 
   batch_end_calls = [batch_end_call, mx.callback.Speedometer(batch_size, show_period/10)]
   epoch_all_calls = [epoch_end_call]
@@ -271,14 +269,6 @@ def Do_Proxy_NCA_Train3():
 
   proxy_metric = Proxy_Metric()
 
-  if False:
-    fn = param_prefix + '_0_' + '.bin'
-    reid_model.bind(data_shapes=data_train.provide_data, 
-                    label_shapes=data_train.provide_label)
-    reid_model.load_params(fn)
-    print 'loaded parameters from', fn
-
-
   def norm_stat(d):
     return mx.nd.norm(d)/np.sqrt(d.size)
 
@@ -296,57 +286,23 @@ def Do_Proxy_NCA_Train3():
        reid_model.save_params(fn)
        print 'saved parameters into', fn
        eval_metric.reset()
-       if False:
-         args, auxs = reid_model.get_params()
-         proxy_Z = args['proxy_Z_weight'].asnumpy()
-         print 'z:', np.abs(proxy_Z).mean()
-         reid_model_P.set_params(args, auxs)
-         reid_model_P.forward(data_batch)
-         outs = reid_model_P.get_outputs()
-         val = outs[1].asnumpy()
-         val2 = outs[2].asnumpy()
-         val3 = outs[3].asnumpy()
-         val4 = outs[4].asnumpy()
-         print 'fc1:', np.abs(val).mean(), 'z:', val2.mean(), 'y:', val3, 'one_proxy:', np.abs(val4).mean(), val2[val2>val1]
-#       args, auxs = reid_model.get_params()
-#       print np.mean(args['proxy_Z_weight'].asnumpy())
 
   reid_model_P.init_params()
-  arg_params_p, aux_params_p = reid_model_P.get_params()
   def epoch_end_call(epoch, symbol, arg_params, aux_params):
-    if True:
-       fn = param_prefix + '_' + str(epoch%4) + '_' + '.bin'
-       reid_model.save_params(fn)
-       print 'saved parameters into', fn
-#    print len(arg_params), len(arg_params_p)
-    reid_model_P.set_params(arg_params, aux_params)
-    carnum = data_train.do_reset()
+    do_epoch_end_call(param_prefix, epoch, reid_model, \
+                      arg_params, aux_params, \
+                      reid_model_P, data_train, \
+                      proxy_num, proxy_batch)
 
-    print 'hello end epoch...ready next proxy batch data and init the proxy_Z_weight...cars id number:%d, proxy_num=%d, proxy_batchsize=%d'%(carnum, proxy_num, proxy_batch)
+  if True:
+    fn = param_prefix + '_0_' + '.bin'
+    reid_model.bind(data_shapes=data_train.provide_data, 
+                    label_shapes=data_train.provide_label)
+    reid_model.load_params(fn)
+    arg_params, aux_params = reid_model.get_params()
+    epoch_end_call(0, None, arg_params, aux_params)
+    print 'loaded parameters from', fn
 
-    proxy_Z_weight = arg_params['proxy_Z_weight']
-    pxy_num, ftdim = proxy_Z_weight.shape
-
-    proxy_Zfeat = None
-    proxy_Znum = None
-    for di, data in enumerate(data_train):
-      output = reid_model_P.forward(data, is_train=False)
-      output = reid_model_P.get_outputs()[0]
-      ctx = output.context
-      if proxy_Zfeat is None:
-        proxy_Zfeat = mx.nd.ones((pxy_num, ftdim), dtype=np.float32, ctx=ctx)*10**-5
-        proxy_Znum = mx.nd.zeros((pxy_num, 1), dtype=np.float32, ctx=ctx) + 10**-5
-      batch_carids = data_train.batch_carids
-      for ri in xrange(data_train.batch_size):
-        carid = batch_carids[ri]
-        proxy_Zfeat[carid] += output[ri]
-        proxy_Znum[carid] += 1
-    proxy_Znum[proxy_Znum==0] = 1
-#    proxy_Zfeat /= proxy_Znum
-    proxy_Zfeat = mx.nd.broadcast_div(proxy_Zfeat, proxy_Znum)
-    proxy_Zfeat.copyto(proxy_Z_weight)
-    reid_model.set_params(arg_params, aux_params)
-    pass
 
   batch_end_calls = [batch_end_call, mx.callback.Speedometer(batch_size, show_period/10)]
   epoch_all_calls = [epoch_end_call]
