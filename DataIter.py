@@ -493,7 +493,8 @@ class CarReID_Proxy_Batch_Mxnet_Iter2(mx.io.DataIter):
     self.proxy_datalist = []
     carids = {}
     for i in xrange(self.proxy_batchsize):
-      idx = self.rndidx_list[i]
+      pxyi = self.cur_proxy_batch * self.proxy_batchsize + i
+      idx = self.rndidx_list[pxyi]
       onedata = self.datalist[idx] 
       parts = onedata.split(',')
       path = parts[0]
