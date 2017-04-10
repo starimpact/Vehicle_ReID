@@ -9,6 +9,20 @@ from Solver import CarReID_Solver, CarReID_Softmax_Solver, CarReID_Proxy_Solver
 from MDL_PARAM import model2 as now_model
 from MDL_PARAM import model2_proxy_nca as proxy_nca_model
 
+def save_checkpoint(model, prefix, epoch):
+    model.symbol.save('%s-symbol.json' % prefix)
+    param_name = '%s-%04d.params' % (prefix, epoch)
+    model.save_params(param_name)
+    logging.info('Saved checkpoint to \"%s\"', param_name)
+
+def load_checkpoint(model, prefix, epoch):
+#    symbol = mx.sym.load('%s-symbol.json' % prefix)
+    param_name = '%s-%04d.params' % (prefix, epoch)
+    model.load_params(param_name)
+    arg_params, aux_params = model.get_params()
+    logging.info('Load checkpoint from \"%s\"', param_name)
+    return arg_params, aux_params
+
 
 
 class Proxy_Metric(metric.EvalMetric):
@@ -38,9 +52,8 @@ def do_epoch_end_call(param_prefix, epoch, reid_model, \
                       reid_model_P, data_train, \
                       proxy_num, proxy_batch):
     if True:
-       fn = param_prefix + '_' + str(epoch%4) + '_' + '.bin'
-       reid_model.save_params(fn)
-       print 'saved parameters into', fn
+       save_checkpoint(reid_model, param_prefix, epoch%4)
+
     reid_model_P.set_params(arg_params, aux_params)
     carnum = data_train.do_reset()
 
@@ -159,9 +172,7 @@ def Do_Proxy_NCA_Train2():
     eval_metric = args[0].eval_metric
     data_batch = args[0].locals['data_batch']  
     if nbatch%show_period==0:
-       fn = param_prefix + '_' + str(epoch%4) + '_' + '.bin'
-       reid_model.save_params(fn)
-       print 'saved parameters into', fn
+       save_checkpoint(reid_model, param_prefix, epoch%4)
        eval_metric.reset()
 
   reid_model_P.init_params()
@@ -172,13 +183,10 @@ def Do_Proxy_NCA_Train2():
                       proxy_num, proxy_batch)
 
   if True:
-    fn = param_prefix + '_0_' + '.bin'
     reid_model.bind(data_shapes=data_train.provide_data, 
                     label_shapes=data_train.provide_label)
-    reid_model.load_params(fn)
-    arg_params, aux_params = reid_model.get_params()
+    arg_params, aux_params = load_checkpoint(reid_model, param_prefix, 0)
     epoch_end_call(0, None, arg_params, aux_params)
-    print 'loaded parameters from', fn
 
   batch_end_calls = [batch_end_call, mx.callback.Speedometer(batch_size, show_period/10)]
   epoch_all_calls = [epoch_end_call]
@@ -282,9 +290,10 @@ def Do_Proxy_NCA_Train3():
     eval_metric = args[0].eval_metric
     data_batch = args[0].locals['data_batch']  
     if nbatch%show_period==0:
-       fn = param_prefix + '_' + str(epoch%4) + '_' + '.bin'
-       reid_model.save_params(fn)
-       print 'saved parameters into', fn
+#       fn = param_prefix + '_' + str(epoch%4) + '_' + '.bin'
+#       reid_model.save_params(fn)
+#       print 'saved parameters into', fn
+       save_checkpoint(reid_model, param_prefix, epoch%4)
        eval_metric.reset()
 
   reid_model_P.init_params()
@@ -295,13 +304,10 @@ def Do_Proxy_NCA_Train3():
                       proxy_num, proxy_batch)
 
   if True:
-    fn = param_prefix + '_0_' + '.bin'
     reid_model.bind(data_shapes=data_train.provide_data, 
                     label_shapes=data_train.provide_label)
-    reid_model.load_params(fn)
-    arg_params, aux_params = reid_model.get_params()
+    arg_params, aux_params = load_checkpoint(reid_model, param_prefix, 0)
     epoch_end_call(0, None, arg_params, aux_params)
-    print 'loaded parameters from', fn
 
 
   batch_end_calls = [batch_end_call, mx.callback.Speedometer(batch_size, show_period/10)]
