@@ -46,24 +46,26 @@ def load_checkpoint(model, prefix, epoch):
 
 
 class Proxy_Metric(metric.EvalMetric):
-  def __init__(self, saveperiod=1):
+  def __init__(self, saveperiod=1, batch_hardidxes=[]):
     print "hello metric init..."
     super(Proxy_Metric, self).__init__('proxy_metric', 3)
     self.p_inst = 0
     self.saveperiod=saveperiod
+    self.batch_hardidxes = batch_hardidxes
 
   def update(self, labels, preds):
 #    print '=========%d========='%(self.p_inst)
     self.p_inst += 1
-    if self.p_inst%self.saveperiod==0:
-      for i in xrange(self.num):
-        self.num_inst[i] += 1
-      eachloss = preds[0].asnumpy()
-      loss = eachloss.mean()
-#      print 'metric', loss
-      self.sum_metric[0] += loss
-      self.sum_metric[1] += np.sum(eachloss<=0.0)
-      self.sum_metric[2] += np.sum(eachloss>0.0)
+    for i in xrange(self.num):
+      self.num_inst[i] += 1
+    eachloss = preds[0].asnumpy()
+    loss = eachloss.mean()
+    self.sum_metric[0] += loss
+    self.sum_metric[1] += np.sum(eachloss<=0.0)
+    self.sum_metric[2] += np.sum(eachloss>0.0)
+    for bi in xrange(len(eachloss)):
+      if eachloss[bi]*5 > loss:#store harder example
+        self.batch_hardidxes.append(bi)
     
 
 def do_epoch_end_call(param_prefix, epoch, reid_model, \
@@ -120,7 +122,7 @@ def Do_Proxy_NCA_Train2():
   devicenum = len(ctxs) 
 
   num_epoch = 1000000
-  batch_size = 32*devicenum
+  batch_size = 48*devicenum
   show_period = 400
 
   assert(batch_size%devicenum==0)
@@ -129,8 +131,8 @@ def Do_Proxy_NCA_Train2():
   bucket_key = bsz_per_device
 
   featdim = 128
-  proxy_batch = 720000
-  proxy_num = 43928#proxy_batch
+  proxy_batch = 10000#720000
+  proxy_num = proxy_batch#43928#proxy_batch
   clsnum = proxy_num
   data_shape = (batch_size, 3, 299, 299)
   proxy_yM_shape = (batch_size, proxy_num)
@@ -175,7 +177,8 @@ def Do_Proxy_NCA_Train2():
                     'clip_gradient':None,
                     'rescale_grad': 1.0/batch_size}
 
-  proxy_metric = Proxy_Metric()
+  batch_hardidxes = []
+  proxy_metric = Proxy_Metric(batch_hardidxes=batch_hardidxes)
 
 
   def norm_stat(d):
@@ -190,6 +193,15 @@ def Do_Proxy_NCA_Train2():
     nbatch = args[0].nbatch + 1
     eval_metric = args[0].eval_metric
     data_batch = args[0].locals['data_batch']  
+    train_data = args[0].locals['train_data']  
+    #expand the hard examples set
+#    print 'batch_hardidxes:', batch_hardidxes
+    for hi in batch_hardidxes:
+      hexp = train_data.batch_infos[hi]
+      if hexp not in train_data.all_hardexps:
+        train_data.all_hardexps.append(hexp)
+    batch_hardidxes[:] = []
+
     if nbatch%show_period==0:
        save_checkpoint(reid_model, param_prefix, epoch%4)
 
@@ -293,7 +305,8 @@ def Do_Proxy_NCA_Train3():
                     'clip_gradient':None,
                     'rescale_grad': 1.0/batch_size}
 
-  proxy_metric = Proxy_Metric()
+  batch_hardidxes = []
+  proxy_metric = Proxy_Metric(batch_hardidxes=batch_hardidxes)
 
   def norm_stat(d):
     return mx.nd.norm(d)/np.sqrt(d.size)
@@ -315,7 +328,7 @@ def Do_Proxy_NCA_Train3():
     do_epoch_end_call(param_prefix, epoch, reid_model, \
                       arg_params, aux_params, \
                       reid_model_P, data_train, \
-                      proxy_num, proxy_batch)
+                      proxy_num, proxy_batch) 
 
   if True:
     reid_model.bind(data_shapes=data_train.provide_data, 
