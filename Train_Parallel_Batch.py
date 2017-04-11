@@ -15,7 +15,7 @@ def save_checkpoint(model, prefix, epoch):
     model.save_params(param_name)
     logging.info('Saved checkpoint to \"%s\"', param_name)
 
-def load_checkpoint(model, prefix, epoch):
+def load_checkpoint2(model, prefix, epoch):
 #    symbol = mx.sym.load('%s-symbol.json' % prefix)
     param_name = '%s-%04d.params' % (prefix, epoch)
     model.load_params(param_name)
@@ -23,28 +23,47 @@ def load_checkpoint(model, prefix, epoch):
     logging.info('Load checkpoint from \"%s\"', param_name)
     return arg_params, aux_params
 
+def load_checkpoint(model, prefix, epoch):
+    param_name = '%s-%04d.params' % (prefix, epoch)
+    save_dict = mx.nd.load(param_name)
+    arg_params = {}
+    aux_params = {}
+    for k, value in save_dict.items():
+        arg_type, name = k.split(':', 1)
+        if name=='proxy_Z_weight':
+            print 'skipped %s...'%name
+            continue
+        if arg_type == 'arg':
+            arg_params[name] = value
+        elif arg_type == 'aux':
+            aux_params[name] = value
+        else:
+            raise ValueError("Invalid param file " + fname)
+    model.set_params(arg_params, aux_params, allow_missing=True)
+    arg_params, aux_params = model.get_params()
+    logging.info('Load checkpoint from \"%s\"', param_name)
+    return arg_params, aux_params
 
 
 class Proxy_Metric(metric.EvalMetric):
   def __init__(self, saveperiod=1):
-    super(Proxy_Metric, self).__init__('proxy_metric')
     print "hello metric init..."
-    self.num_inst = 0
-    self.sum_metric = 0.0
+    super(Proxy_Metric, self).__init__('proxy_metric', 3)
     self.p_inst = 0
     self.saveperiod=saveperiod
-
-#  def reset(self):
-#    pass
 
   def update(self, labels, preds):
 #    print '=========%d========='%(self.p_inst)
     self.p_inst += 1
     if self.p_inst%self.saveperiod==0:
-      self.num_inst += 1
-      loss = preds[0].asnumpy().mean()
+      for i in xrange(self.num):
+        self.num_inst[i] += 1
+      eachloss = preds[0].asnumpy()
+      loss = eachloss.mean()
 #      print 'metric', loss
-      self.sum_metric += loss
+      self.sum_metric[0] += loss
+      self.sum_metric[1] += np.sum(eachloss<=0.0)
+      self.sum_metric[2] += np.sum(eachloss>0.0)
     
 
 def do_epoch_end_call(param_prefix, epoch, reid_model, \
@@ -101,7 +120,7 @@ def Do_Proxy_NCA_Train2():
   devicenum = len(ctxs) 
 
   num_epoch = 1000000
-  batch_size = 48*devicenum
+  batch_size = 32*devicenum
   show_period = 400
 
   assert(batch_size%devicenum==0)
@@ -110,8 +129,8 @@ def Do_Proxy_NCA_Train2():
   bucket_key = bsz_per_device
 
   featdim = 128
-  proxy_batch = 10000
-  proxy_num = proxy_batch
+  proxy_batch = 720000
+  proxy_num = 43928#proxy_batch
   clsnum = proxy_num
   data_shape = (batch_size, 3, 299, 299)
   proxy_yM_shape = (batch_size, proxy_num)
@@ -173,7 +192,6 @@ def Do_Proxy_NCA_Train2():
     data_batch = args[0].locals['data_batch']  
     if nbatch%show_period==0:
        save_checkpoint(reid_model, param_prefix, epoch%4)
-       eval_metric.reset()
 
   reid_model_P.init_params()
   def epoch_end_call(epoch, symbol, arg_params, aux_params):
@@ -290,11 +308,7 @@ def Do_Proxy_NCA_Train3():
     eval_metric = args[0].eval_metric
     data_batch = args[0].locals['data_batch']  
     if nbatch%show_period==0:
-#       fn = param_prefix + '_' + str(epoch%4) + '_' + '.bin'
-#       reid_model.save_params(fn)
-#       print 'saved parameters into', fn
        save_checkpoint(reid_model, param_prefix, epoch%4)
-       eval_metric.reset()
 
   reid_model_P.init_params()
   def epoch_end_call(epoch, symbol, arg_params, aux_params):
