@@ -373,10 +373,10 @@ class CarReID_Proxy_Batch_Mxnet_Iter(mx.io.DataIter):
          self.num_proxy_batch, self.big_epoch, len(self.all_hardexps))
 
     hardexplist = sorted(self.all_hardexps.items(), key=operator.itemgetter(1), reverse=True)
-    if len(hardexplist)>0: print hardexplist[0], hardexplist[-1] 
-    hardexplist = hardexplist[:self.proxy_batchsize*4]
+    hardexplist = hardexplist[:self.proxy_batchsize]
     self.all_hardexps = dict(hardexplist)
     hardnum = len(self.all_hardexps)
+    if hardnum>0: print hardexplist[0], hardexplist[hardnum/2], hardexplist[-1] 
     hardrndidx = np.random.permutation(hardnum)
     nowhardidx = 0
     self.proxy_datalist = []

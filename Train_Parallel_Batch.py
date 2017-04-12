@@ -63,10 +63,11 @@ class Proxy_Metric(metric.EvalMetric):
     self.sum_metric[0] += loss
     self.sum_metric[1] += np.sum(eachloss<=0.0)
     self.sum_metric[2] += np.sum(eachloss>0.0)
-    for bi in xrange(len(eachloss)):
-      oneloss = eachloss[bi]
-      if oneloss*5 > loss:#store harder example
-        self.batch_hardidxes.append([bi, oneloss])
+    self.batch_hardidxes[:] = eachloss
+#    for bi in xrange(len(eachloss)):
+#      oneloss = eachloss[bi]
+#      if oneloss*5 > loss:#store harder example
+#        self.batch_hardidxes.append([bi, oneloss])
     
 
 def do_epoch_end_call(param_prefix, epoch, reid_model, \
@@ -197,7 +198,7 @@ def Do_Proxy_NCA_Train2():
     train_data = args[0].locals['train_data']  
     #expand the hard examples set
 #    print 'batch_hardidxes:', batch_hardidxes
-    for hi,loss in batch_hardidxes:
+    for hi,loss in enumerate(batch_hardidxes):
       hexp = train_data.batch_infos[hi]
       if not train_data.all_hardexps.has_key(hexp):
         train_data.all_hardexps[hexp] = loss
