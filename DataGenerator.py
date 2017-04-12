@@ -625,6 +625,7 @@ def get_data_label_proxy_batch_mxnet(data_infos, label_infos, datalist, batch_no
   
   data_batch = []
   idlist = []
+  batch_info = []
   for idx in xrange(batch_now*batchsize, (batch_now+1)*batchsize):
     data_batch.append(datalist[idx])
     idlist.append(idx)
@@ -637,6 +638,7 @@ def get_data_label_proxy_batch_mxnet(data_infos, label_infos, datalist, batch_no
 #    print onecar['id']
     onecar['son'] = parts[1]
     cars.append(onecar)
+    batch_info.append(parts[0]+','+parts[1])
 
   stdsize = data_infos[0][1][2:]
   dataidx = 0
@@ -693,7 +695,7 @@ def get_data_label_proxy_batch_mxnet(data_infos, label_infos, datalist, batch_no
       cv2.imwrite('tmpimg/stdson%d.jpg'%(int(carid)), imgsave)
   datas_nd = [mx.nd.array(datas['data'])]
   label_nd = [mx.nd.array(labels['proxy_yM']), mx.nd.array(labels['proxy_ZM'])]
-  return datas_nd, label_nd, carids, data_batch
+  return datas_nd, label_nd, carids, batch_info
 
 
 

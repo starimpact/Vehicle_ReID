@@ -1,6 +1,7 @@
 import numpy as np
 import mxnet as mx 
 import DataGenerator as dg 
+import operator
 
 datafn = '/media/data1/mzhang/data/car_ReID_for_zhangming/data.list'
 datafn = '/home/mingzhang/data/car_ReID_for_zhangming/data.list'
@@ -339,7 +340,7 @@ class CarReID_Proxy_Batch_Mxnet_Iter(mx.io.DataIter):
     self.num_batches = self.proxy_batchsize / label_shapes[0][0]
     self.batch_carids = []
     self.batch_infos = []
-    self.all_hardexps = []
+    self.all_hardexps = {}
     self.num_proxy_batch = self.datalen / self.proxy_batchsize
     self.num_proxy_batch_max = num_proxy_batch_max
     self.cur_proxy_batch = 0
@@ -364,7 +365,6 @@ class CarReID_Proxy_Batch_Mxnet_Iter(mx.io.DataIter):
        or (self.num_proxy_batch_max > 0.0 \
        and self.cur_proxy_batch > self.num_proxy_batch * self.num_proxy_batch_max):
       self.cur_proxy_batch = 0 
-      self.all_hardexps = []
       self.big_epoch += 1
       self.rndidx_list = np.random.permutation(self.datalen)
   
@@ -372,6 +372,10 @@ class CarReID_Proxy_Batch_Mxnet_Iter(mx.io.DataIter):
          self.proxy_batchsize, self.datalen, self.cur_proxy_batch+1,\
          self.num_proxy_batch, self.big_epoch, len(self.all_hardexps))
 
+    hardexplist = sorted(self.all_hardexps.items(), key=operator.itemgetter(1), reverse=True)
+    if len(hardexplist)>0: print hardexplist[0], hardexplist[-1] 
+    hardexplist = hardexplist[:self.proxy_batchsize*4]
+    self.all_hardexps = dict(hardexplist)
     hardnum = len(self.all_hardexps)
     hardrndidx = np.random.permutation(hardnum)
     nowhardidx = 0
@@ -387,7 +391,8 @@ class CarReID_Proxy_Batch_Mxnet_Iter(mx.io.DataIter):
       carid = parts[0].split('/')[-1]
       if nowhardidx < hardnum and np.random.rand() < 0.5:
         nhid = hardrndidx[nowhardidx]
-        parts = self.all_hardexps[nhid].split(',')
+        oneitem = hardexplist[nhid][0]
+        parts = oneitem.split(',')
         path = parts[0]
         son = parts[1]
         carid = parts[0].split('/')[-1]
