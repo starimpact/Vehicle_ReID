@@ -63,7 +63,7 @@ class Proxy_Metric(metric.EvalMetric):
     self.sum_metric[0] += loss
     self.sum_metric[1] += np.sum(eachloss<=0.0)
     self.sum_metric[2] += np.sum(eachloss>0.0)
-    self.batch_hardidxes[:] = eachloss
+    if loss < 0: self.batch_hardidxes[:] = eachloss
 #    for bi in xrange(len(eachloss)):
 #      oneloss = eachloss[bi]
 #      if oneloss*5 > loss:#store harder example
