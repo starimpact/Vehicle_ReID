@@ -400,7 +400,7 @@ class CarReID_Proxy_Batch_Mxnet_Iter(mx.io.DataIter):
       if not carids.has_key(carid):
         carids[carid] = len(carids)
       proxyid = carids[carid] 
-      proxy_str = path + ',' + son + ',' + str(proxyid)
+      proxy_str = '%s,%s,%s,%s'%(path, son, carid, str(proxyid))
       self.proxy_datalist.append(proxy_str)
 
     print 'randomly selected %d hard examples...'%nowhardidx
@@ -505,18 +505,28 @@ class CarReID_Proxy_Batch_Mxnet_Iter2(mx.io.DataIter):
     pass
 
   def do_reset(self):
-    print 'getting another proxy batch to train(%d/%d)...'%(self.proxy_batchsize, self.datalen)
     self.cur_batch = 0        
     self.batch_carids = []
-    if self.cur_proxy_batch == 0 or self.cur_proxy_batch == self.num_proxy_batch:
+    self.batch_infos = []
+    if self.cur_proxy_batch == 0 \
+       or self.cur_proxy_batch == self.num_proxy_batch \
+       or (self.num_proxy_batch_max > 0.0 \
+       and self.cur_proxy_batch > self.num_proxy_batch * self.num_proxy_batch_max):
       self.cur_proxy_batch = 0 
       self.big_epoch += 1
       self.rndidx_list = np.random.permutation(self.datalen)
-
-    print 'getting another proxy batch to train(%d/%d, %d/%d) [big_epoch=%d]...'%(\
+  
+    print 'getting another proxy batch to train(%d/%d, %d/%d) [big_epoch=%d] hard_exmaple=%d...'%(\
          self.proxy_batchsize, self.datalen, self.cur_proxy_batch+1,\
-         self.num_proxy_batch, self.big_epoch)
+         self.num_proxy_batch, self.big_epoch, len(self.all_hardexps))
 
+    hardexplist = sorted(self.all_hardexps.items(), key=operator.itemgetter(1), reverse=True)
+    hardexplist = hardexplist[:self.proxy_batchsize]
+    self.all_hardexps = dict(hardexplist)
+    hardnum = len(self.all_hardexps)
+    if hardnum>0: print hardexplist[0], hardexplist[hardnum/2], hardexplist[-1] 
+    hardrndidx = np.random.permutation(hardnum)
+    nowhardidx = 0
     self.proxy_datalist = []
     carids = {}
     for i in xrange(self.proxy_batchsize):
@@ -527,12 +537,21 @@ class CarReID_Proxy_Batch_Mxnet_Iter2(mx.io.DataIter):
       path = parts[0]
       son = parts[1]
       carid = parts[2]
+      if nowhardidx < hardnum and np.random.rand() < 0.5:
+        nhid = hardrndidx[nowhardidx]
+        oneitem = hardexplist[nhid][0]
+        parts = oneitem.split(',')
+        path = parts[0]
+        son = parts[1]
+        carid = parts[2]
+        nowhardidx += 1
       if not carids.has_key(carid):
         carids[carid] = len(carids)
       proxyid = carids[carid] 
-      proxy_str = path + ',' + son + ',' + str(proxyid)
+      proxy_str = '%s,%s,%s,%s'%(path, son, carid, str(proxyid))
       self.proxy_datalist.append(proxy_str)
 
+    print 'randomly selected %d hard examples...'%nowhardidx
     self.cur_proxy_batch += 1
     return len(carids)
 

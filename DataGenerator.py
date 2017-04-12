@@ -634,11 +634,12 @@ def get_data_label_proxy_batch_mxnet(data_infos, label_infos, datalist, batch_no
     onecar = {}
     parts = onedata.split(',')
     onecar['path'] = parts[0]
-    onecar['id'] = parts[2] 
+    onecar['id'] = parts[-1] 
 #    print onecar['id']
     onecar['son'] = parts[1]
     cars.append(onecar)
-    batch_info.append(parts[0]+','+parts[1])
+    oneinfo = '%s,%s,%s'%(parts[0], parts[1], parts[2])
+    batch_info.append(oneinfo)
 
   stdsize = data_infos[0][1][2:]
   dataidx = 0

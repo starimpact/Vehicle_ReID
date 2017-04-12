@@ -70,6 +70,31 @@ class Proxy_Metric(metric.EvalMetric):
 #        self.batch_hardidxes.append([bi, oneloss])
     
 
+def do_batch_end_call(reid_model, param_prefix, \
+                      show_period, \
+                      batch_hardidxes, \
+                      *args, **kwargs):
+  #  print eval_metric.loss_list
+    epoch = args[0].epoch
+    nbatch = args[0].nbatch + 1
+    eval_metric = args[0].eval_metric
+    data_batch = args[0].locals['data_batch']  
+    train_data = args[0].locals['train_data']  
+    #expand the hard examples set
+#    print 'batch_hardidxes:', batch_hardidxes
+    for hi,loss in enumerate(batch_hardidxes):
+      hexp = train_data.batch_infos[hi]
+      if not train_data.all_hardexps.has_key(hexp):
+        train_data.all_hardexps[hexp] = loss
+      else:
+        train_data.all_hardexps[hexp] += loss
+    batch_hardidxes[:] = []
+
+    if nbatch%show_period==0:
+       save_checkpoint(reid_model, param_prefix, epoch%4)
+
+
+
 def do_epoch_end_call(param_prefix, epoch, reid_model, \
                       arg_params, aux_params, \
                       reid_model_P, data_train, \
@@ -160,6 +185,7 @@ def Do_Proxy_NCA_Train2():
   print dlr_steps
   lr_scheduler = mx.lr_scheduler.MultiFactorScheduler(dlr_steps, lr_reduce)
   param_prefix = 'MDL_PARAM/params2_proxy_nca/car_reid'
+  load_paramidx = 0
 
   reid_net = proxy_nca_model.CreateModel_Color2(None, bsz_per_device, proxy_num, data_shape[2:])
   reid_net_p = proxy_nca_model.CreateModel_Color_predict()
@@ -190,24 +216,11 @@ def Do_Proxy_NCA_Train2():
                        pattern='.*part1_fc1.*|.*proxy_Z_weight.*')
 
   def batch_end_call(*args, **kwargs):
-  #  print eval_metric.loss_list
-    epoch = args[0].epoch
-    nbatch = args[0].nbatch + 1
-    eval_metric = args[0].eval_metric
-    data_batch = args[0].locals['data_batch']  
-    train_data = args[0].locals['train_data']  
-    #expand the hard examples set
-#    print 'batch_hardidxes:', batch_hardidxes
-    for hi,loss in enumerate(batch_hardidxes):
-      hexp = train_data.batch_infos[hi]
-      if not train_data.all_hardexps.has_key(hexp):
-        train_data.all_hardexps[hexp] = loss
-      else:
-        train_data.all_hardexps[hexp] += loss
-    batch_hardidxes[:] = []
+    do_batch_end_call(reid_model, param_prefix, \
+                      show_period, \
+                      batch_hardidxes, \
+                      *args, **kwargs)
 
-    if nbatch%show_period==0:
-       save_checkpoint(reid_model, param_prefix, epoch%4)
 
   reid_model_P.init_params()
   def epoch_end_call(epoch, symbol, arg_params, aux_params):
@@ -216,10 +229,10 @@ def Do_Proxy_NCA_Train2():
                       reid_model_P, data_train,\
                       proxy_num, proxy_batch)
 
-  if True:
+  if True and load_paramidx is not None :
     reid_model.bind(data_shapes=data_train.provide_data, 
                     label_shapes=data_train.provide_label)
-    arg_params, aux_params = load_checkpoint(reid_model, param_prefix, 0)
+    arg_params, aux_params = load_checkpoint(reid_model, param_prefix, load_paramidx)
     epoch_end_call(0, None, arg_params, aux_params)
 
   batch_end_calls = [batch_end_call, mx.callback.Speedometer(batch_size, show_period/10)]
@@ -290,6 +303,7 @@ def Do_Proxy_NCA_Train3():
   print dlr_steps
   lr_scheduler = mx.lr_scheduler.MultiFactorScheduler(dlr_steps, lr_reduce)
   param_prefix = 'MDL_PARAM/params2_proxy_nca/car_reid'
+  load_paramidx = 0
 
   reid_net = proxy_nca_model.CreateModel_Color2(None, bsz_per_device, proxy_num, data_shape[2:])
   reid_net_p = proxy_nca_model.CreateModel_Color_predict()
@@ -319,13 +333,10 @@ def Do_Proxy_NCA_Train3():
                        pattern='.*part1_fc1.*|.*proxy_Z_weight.*')
 
   def batch_end_call(*args, **kwargs):
-  #  print eval_metric.loss_list
-    epoch = args[0].epoch
-    nbatch = args[0].nbatch + 1
-    eval_metric = args[0].eval_metric
-    data_batch = args[0].locals['data_batch']  
-    if nbatch%show_period==0:
-       save_checkpoint(reid_model, param_prefix, epoch%4)
+    do_batch_end_call(reid_model, param_prefix, \
+                      show_period, \
+                      batch_hardidxes, \
+                      *args, **kwargs)
 
   reid_model_P.init_params()
   def epoch_end_call(epoch, symbol, arg_params, aux_params):
@@ -334,10 +345,10 @@ def Do_Proxy_NCA_Train3():
                       reid_model_P, data_train, \
                       proxy_num, proxy_batch) 
 
-  if True:
+  if True and load_paramidx is not None :
     reid_model.bind(data_shapes=data_train.provide_data, 
                     label_shapes=data_train.provide_label)
-    arg_params, aux_params = load_checkpoint(reid_model, param_prefix, 0)
+    arg_params, aux_params = load_checkpoint(reid_model, param_prefix, load_paramidx)
     epoch_end_call(0, None, arg_params, aux_params)
 
 
