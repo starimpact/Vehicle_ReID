@@ -4,8 +4,8 @@ import numpy as np
 
 
 def test():
-  ashape = (1, 20)
-  bshape = (1, 20)
+  ashape = (128*32, 20000)
+  bshape = (128*32, 20000)
   a = mx.sym.Variable('a')
   b = mx.sym.Variable('b')
   idx = mx.sym.Variable('idx')
@@ -15,16 +15,22 @@ def test():
   c = mx.sym.broadcast_minus(a, b)
 #  c = mx.sym.sum_axis(c, axis=1)
 #  bs = mx.sym.SliceChannel(b, axis=0, num_outputs=4)
-  cs = mx.sym.Group([c, a1[0]])
+  cl = mx.sym.MakeLoss(c)
+  cs = mx.sym.Group([cl, a1])
 #  cs = mx.sym.minimum(c, -10000)#mx.sym.sum(c)
-  c_exe = cs.bind(ctx=mx.cpu(), args={'a':mx.nd.ones(ashape), 'b':mx.nd.ones(bshape)})
+#  c_exe = cs.bind(ctx=mx.cpu(), args={'a':mx.nd.ones(ashape), 'b':mx.nd.ones(bshape)})
+  c_exe = cs.simple_bind(ctx=mx.gpu(1), a=ashape, b=bshape)
   args = c_exe.arg_dict
-  args['a'][:] = mx.nd.array(np.random.rand(*ashape))
+  grad = c_exe.grad_dict
+  args['a'][:] = mx.nd.array(np.random.rand(*ashape), ctx=mx.cpu())
  
-  c_exe.forward()
+  c_exe.forward(is_train=True)
+  lossa = mx.nd.ones(ashape, ctx=mx.gpu(1))*1 
+  lossb = mx.nd.ones(ashape, ctx=mx.gpu(1))*1
+  c_exe.backward(out_grads=[lossa, lossb])
+  print grad['a'].asnumpy()
   print c_exe.outputs[0].asnumpy().shape
-#  c_exe.outputs[1][:] = 0
-  print c_exe.outputs[1].asnumpy()
+  print c_exe.outputs[1].asnumpy().shape
 
 
 if __name__=='__main__':

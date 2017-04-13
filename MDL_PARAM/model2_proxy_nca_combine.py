@@ -232,349 +232,6 @@ def create_inception_resnet_v2(data, namepre='', args=None):
   return net, args
 
 
-def create_reid_net(batch_size, proxy_num):
-  print "note: image size must be:(299, 299)"
-
-  data0 = mx.sym.Variable('data')
-  proxy_yM = mx.sym.Variable('proxy_yM')
-  proxy_Z = mx.sym.Variable('proxy_Z')
-  proxy_ZM = mx.sym.Variable('proxy_ZM')
-  args_all = None
-  reid_feature, args_all = create_inception_resnet_v2(data0, namepre='part1', args=args_all)
-  features = mx.sym.SliceChannel(reid_feature, axis=0, num_outputs=batch_size, name='features_slice')
-  proxy_yMs = mx.sym.SliceChannel(proxy_yM, axis=0, num_outputs=batch_size, name='proxy_yM_slice')
-  proxy_ZMs = mx.sym.SliceChannel(proxy_ZM, axis=0, num_outputs=batch_size, name='proxy_ZM_slice')
-  proxy_ncas = []
-  min_value = 10**-16
-  norm_value = 4.0
-  
-  #norm
-  if True:
-    proxy_Znorm = mx.sym.sqrt(mx.sym.sum_axis(proxy_Z**2, axis=1))
-    proxy_Znorm = mx.sym.Reshape(proxy_Znorm, shape=(-2, 1))
-    proxy_Z = mx.sym.broadcast_div(proxy_Z, proxy_Znorm) * norm_value
-
-  for bi in xrange(batch_size):
-    one_feat = features[bi]
-    
-    #norm 
-    if True:
-      one_feat_norm = mx.sym.sqrt(mx.sym.sum(one_feat**2))
-      one_feat_norm = mx.sym.Reshape(one_feat_norm, shape=(-2, 1))
-      one_feat = mx.sym.broadcast_div(one_feat, one_feat_norm) * norm_value
-    
-    one_proxy_yM = proxy_yMs[bi]
-    one_proxy_ZM = proxy_ZMs[bi]
-
-    z = mx.sym.broadcast_minus(one_feat, proxy_Z)
-    z = mx.sym.square(z)
-    z = mx.sym.sum_axis(z, axis=1)
-    z = -z
-    tM = mx.sym.Reshape(one_proxy_ZM, shape=(-1,))
-    z = mx.sym.exp(z) * tM
-    z = mx.sym.sum(z) + min_value 
-
-    tyM = mx.sym.Reshape(one_proxy_yM, shape=(-1, 1))
-    one_proxy_y = mx.sym.broadcast_mul(tyM, proxy_Z)
-    one_proxy_y = mx.sym.sum_axis(one_proxy_y, axis=0)
-    one_feat = mx.sym.Reshape(one_feat, shape=(-1,))
-    y = one_feat - one_proxy_y
-    y = mx.sym.square(y)
-    y = mx.sym.sum(y)
-    y = -y
-    y = mx.sym.exp(y) + min_value
-    one_proxy_nca = -mx.sym.log(y/z)
-    
-    proxy_ncas.append(one_proxy_nca)
-
-  proxy_nca = mx.sym.Concat(*proxy_ncas, dim=0)
-  reid_net = proxy_nca 
-#  reid_net = proxy_nca
-  reid_net  = mx.sym.MakeLoss(reid_net, name='proxy_nca_loss')
-
-#  print args_all
-  return reid_net
-
-
-#for mxnet 0.8.0
-def create_reid2_net(batch_size, proxy_num):
-  print "note: image size must be:(299, 299)"
-
-  data0 = mx.sym.Variable('data')
-  proxy_yM = mx.sym.Variable('proxy_yM')
-  proxy_Z = mx.sym.Variable('proxy_Z_weight')
-  proxy_ZM = mx.sym.Variable('proxy_ZM')
-  args_all = None
-  reid_feature, args_all = create_inception_resnet_v2(data0, namepre='part1', args=args_all)
-
-  reid_feature = mx.sym.Custom(data=reid_feature, proxy=proxy_Z, proxy_num=proxy_num, name='proxy_set', op_type='proxy_set')
-
-  features = mx.sym.SliceChannel(reid_feature, axis=0, num_outputs=batch_size, name='features_slice')
-  proxy_yMs = mx.sym.SliceChannel(proxy_yM, axis=0, num_outputs=batch_size, name='proxy_yM_slice')
-  proxy_ZMs = mx.sym.SliceChannel(proxy_ZM, axis=0, num_outputs=batch_size, name='proxy_ZM_slice')
-  proxy_ncas = []
-  min_value = 10**-16
-  norm_value = 4.0
-  
-  #norm
-  if True:
-    proxy_Znorm = mx.sym.sqrt(mx.sym.sum_axis(proxy_Z**2, axis=1))
-    proxy_Znorm = mx.sym.Reshape(proxy_Znorm, shape=(-2, 1))
-    proxy_Z = mx.sym.broadcast_div(proxy_Z, proxy_Znorm) * norm_value
-
-  for bi in xrange(batch_size):
-    one_feat = features[bi]
-    
-    #norm 
-    if True:
-      one_feat_norm = mx.sym.sqrt(mx.sym.sum(one_feat**2))
-      one_feat_norm = mx.sym.Reshape(one_feat_norm, shape=(-2, 1))
-      one_feat = mx.sym.broadcast_div(one_feat, one_feat_norm) * norm_value
-    
-    one_proxy_yM = proxy_yMs[bi]
-    one_proxy_ZM = proxy_ZMs[bi]
-
-    z = mx.sym.broadcast_minus(one_feat, proxy_Z)
-    z = mx.sym.square(z)
-    z = mx.sym.sum_axis(z, axis=1)
-    z = -z
-    tM = mx.sym.Reshape(one_proxy_ZM, shape=(-1,))
-    z = mx.sym.exp(z) * tM
-    z = mx.sym.sum(z) + min_value 
-
-    tyM = mx.sym.Reshape(one_proxy_yM, shape=(-1, 1))
-    one_proxy_y = mx.sym.broadcast_mul(tyM, proxy_Z)
-    one_proxy_y = mx.sym.sum_axis(one_proxy_y, axis=0)
-    one_feat = mx.sym.Reshape(one_feat, shape=(-1,))
-    y = one_feat - one_proxy_y
-    y = mx.sym.square(y)
-    y = mx.sym.sum(y)
-    y = -y
-    y = mx.sym.exp(y) + min_value
-    one_proxy_nca = -mx.sym.log(y/z)
-    
-    proxy_ncas.append(one_proxy_nca)
-
-  proxy_nca = mx.sym.Concat(*proxy_ncas, dim=0)
-  reid_net = proxy_nca 
-#  reid_net = proxy_nca
-  reid_net  = mx.sym.MakeLoss(reid_net, name='proxy_nca_loss')
-
-#  print args_all
-  return reid_net
-
-#for newest mxnet
-def create_reid3_net(batch_size, proxy_num):
-  print "note: image size must be:(299, 299)"
-
-  data0 = mx.sym.var('data')
-  proxy_yM = mx.sym.var('proxy_yM')
-  proxy_Z = mx.sym.var(name='proxy_Z_weight', 
-#                       init=mx.initializer.Uniform(),
-                       shape=(proxy_num, 128), 
-                       dtype=np.float32)
-  proxy_ZM = mx.sym.var('proxy_ZM')
-  args_all = None
-  reid_feature, args_all = create_inception_resnet_v2(data0, namepre='part1', args=args_all)
-  print reid_feature.name
-
-  features = mx.sym.split(reid_feature, axis=0, num_outputs=batch_size, name='features_slice')
-  proxy_yMs = mx.sym.split(proxy_yM, axis=0, num_outputs=batch_size, name='proxy_yM_slice')
-  proxy_ZMs = mx.sym.split(proxy_ZM, axis=0, num_outputs=batch_size, name='proxy_ZM_slice')
-  proxy_ncas = []
-  min_value = 10**-16
-  norm_value = (84**0.5)/2
-  print 'norm_value:', norm_value
-  
-  #norm
-  if True:
-    proxy_Znorm = mx.sym.sum_axis(proxy_Z**2, axis=1)
-#    print proxy_Znorm.name
-    proxy_Znorm = mx.sym.sqrt(proxy_Znorm)
-#    print proxy_Znorm.name
-    proxy_Znorm = mx.sym.Reshape(proxy_Znorm, shape=(-2, 1))
-    proxy_Z = mx.sym.broadcast_div(proxy_Z, proxy_Znorm) * norm_value
-#    print proxy_Z.name
-
-  for bi in xrange(batch_size):
-    one_feat = features[bi]
-    
-    #norm 
-    if True:
-      one_feat_norm = mx.sym.sqrt(mx.sym.sum(one_feat**2))
-      one_feat_norm = mx.sym.Reshape(one_feat_norm, shape=(-2, 1))
-      one_feat = mx.sym.broadcast_div(one_feat, one_feat_norm) * norm_value
-    
-    one_proxy_yM = proxy_yMs[bi]
-    one_proxy_ZM = proxy_ZMs[bi]
-
-    tzM = mx.sym.Reshape(one_proxy_ZM, shape=(-1,))
-    z = mx.sym.broadcast_minus(one_feat, proxy_Z)
-    z = mx.sym.square(z)
-    z = mx.sym.sum_axis(z, axis=1)
-#    print 'z:', z.name
-    z = -z
-#    z = mx.sym.exp(z)
-#    print 'z:', z.name
-#    z = z * tzM
-#    z = mx.sym.sum(z)# + min_value 
-#    print 'z:', z.name
-
-    tyM = mx.sym.Reshape(one_proxy_yM, shape=(-1, 1))
-    one_proxy_y = mx.sym.broadcast_mul(tyM, proxy_Z)
-    one_proxy_y = mx.sym.sum_axis(one_proxy_y, axis=0)
-#    print 'one_proxy_y:', one_proxy_y.name
-    one_feat = mx.sym.Reshape(one_feat, shape=(-1,))
-    y = one_feat - one_proxy_y
-    y = mx.sym.square(y)
-    y = mx.sym.sum(y)
-#    print 'y:', y.name
-    y = -y
-#    y = mx.sym.exp(y) + min_value
-#    one_proxy_nca = -mx.sym.log(y/z)
-
-#    print 'z:', z.name, 'y:', y.name
-    z_y = mx.sym.broadcast_minus(z, y)
-#    print z_y.name
-    z_y = mx.sym.exp(z_y) * tzM
-    z_y = mx.sym.sum(z_y)
-    z_y = z_y + min_value
-    one_proxy_nca = mx.sym.log(z_y)
-    
-    proxy_ncas.append(one_proxy_nca)
-
-  proxy_nca = mx.sym.Concat(*proxy_ncas, dim=0)
-  reid_net = proxy_nca 
-#  reid_net = proxy_nca
-  reid_net = mx.sym.MakeLoss(reid_net, name='proxy_nca_loss')
-
-#  print args_all
-  return reid_net
-
-def create_reid4_net(batch_size, proxy_num):
-  print "note: image size must be:(299, 299)"
-
-  data0 = mx.sym.Variable('data')
-  proxy_yM = mx.sym.Variable('proxy_yM')
-  proxy_Z = mx.sym.Variable(name='proxy_Z_weight', 
-                       shape=(proxy_num, 128))
-  proxy_ZM = mx.sym.Variable('proxy_ZM')
-  args_all = None
-  reid_feature, args_all = create_inception_resnet_v2(data0, namepre='part1', args=args_all)
-  print reid_feature.name
-
-  reid_feature = mx.sym.Custom(data=reid_feature, proxy=proxy_Z, proxy_num=proxy_num, name='proxy_set', op_type='proxy_set')
-
-  features = mx.sym.SliceChannel(reid_feature, axis=0, num_outputs=batch_size, name='features_slice')
-  proxy_yMs = mx.sym.SliceChannel(proxy_yM, axis=0, num_outputs=batch_size, name='proxy_yM_slice')
-  proxy_ZMs = mx.sym.SliceChannel(proxy_ZM, axis=0, num_outputs=batch_size, name='proxy_ZM_slice')
-  proxy_ncas = []
-  min_value = 10**-16
-  norm_value = (84**0.5)/2
-  print 'norm_value:', norm_value
-  
-  #norm
-  if True:
-    proxy_Znorm = mx.sym.sum_axis(proxy_Z**2, axis=1)
-#    print proxy_Znorm.name
-    proxy_Znorm = mx.sym.sqrt(proxy_Znorm)
-#    print proxy_Znorm.name
-    proxy_Znorm = mx.sym.Reshape(proxy_Znorm, shape=(-2, 1))
-    proxy_Z = mx.sym.broadcast_div(proxy_Z, proxy_Znorm) * norm_value
-#    print proxy_Z.name
-
-  for bi in xrange(batch_size):
-    one_feat = features[bi]
-    
-    #norm 
-    if True:
-      one_feat_norm = mx.sym.sqrt(mx.sym.sum(one_feat**2))
-      one_feat_norm = mx.sym.Reshape(one_feat_norm, shape=(-2, 1))
-      one_feat = mx.sym.broadcast_div(one_feat, one_feat_norm) * norm_value
-    
-    one_proxy_yM = proxy_yMs[bi]
-    one_proxy_ZM = proxy_ZMs[bi]
-
-    tzM = mx.sym.Reshape(one_proxy_ZM, shape=(-1,))
-    z = mx.sym.broadcast_minus(one_feat, proxy_Z)
-    z = mx.sym.square(z)
-    z = mx.sym.sum_axis(z, axis=1)
-#    print 'z:', z.name
-    z = -z
-#    z = mx.sym.exp(z)
-#    print 'z:', z.name
-#    z = z * tzM
-#    z = mx.sym.sum(z)# + min_value 
-#    print 'z:', z.name
-
-    tyM = mx.sym.Reshape(one_proxy_yM, shape=(-1, 1))
-    one_proxy_y = mx.sym.broadcast_mul(tyM, proxy_Z)
-    one_proxy_y = mx.sym.sum_axis(one_proxy_y, axis=0)
-#    print 'one_proxy_y:', one_proxy_y.name
-    one_feat = mx.sym.Reshape(one_feat, shape=(-1,))
-    y = one_feat - one_proxy_y
-    y = mx.sym.square(y)
-    y = mx.sym.sum(y)
-#    print 'y:', y.name
-    y = -y
-#    y = mx.sym.exp(y) + min_value
-#    one_proxy_nca = -mx.sym.log(y/z)
-
-#    print 'z:', z.name, 'y:', y.name
-    z_y = mx.sym.broadcast_minus(z, y)
-#    print z_y.name
-    z_y = mx.sym.exp(z_y) * tzM
-    z_y = mx.sym.sum(z_y)
-    z_y = z_y + min_value
-    one_proxy_nca = mx.sym.log(z_y)
-    
-    proxy_ncas.append(one_proxy_nca)
-
-  proxy_nca = mx.sym.Concat(*proxy_ncas, dim=0)
-  reid_net = proxy_nca 
-#  reid_net = proxy_nca
-  reid_net = mx.sym.MakeLoss(reid_net, name='proxy_nca_loss')
-
-#  print args_all
-  return reid_net
-
-
-def CreateModel_Color(ctx, batch_size, proxy_num, imagesize):
-  print 'creating network model2_proxy_nca...'
-  assert(imagesize[0]==299 and imagesize[1]==299)
-  reid_net = create_reid_net(batch_size, proxy_num)
-
-  return reid_net 
-
-
-def CreateModel_Color2(ctx, batch_size, proxy_num, imagesize):
-  print 'creating network model2_proxy_nca...'
-  assert(imagesize[0]==299 and imagesize[1]==299)
-#  reid_net = create_reid2_net(batch_size, proxy_num)
-#  reid_net = create_reid3_net(batch_size, proxy_num)
-  reid_net = create_reid4_net(batch_size, proxy_num)
-
-  return reid_net 
-
-def CreateModel_Color2_P(ctx, batch_size, proxy_num, imagesize):
-  print 'creating network model2_proxy_nca...'
-  assert(imagesize[0]==299 and imagesize[1]==299)
-#  reid_net = create_reid2_net(batch_size, proxy_num)
-  reid_net = create_reid3_net(batch_size, proxy_num)
-  intersall = reid_net.get_internals()
-#  print intersall.list_outputs()
-  inters = [reid_net,
-            intersall['part1_fc1_output'],
-            intersall['_mulscalar250_output'],
-            intersall['_mulscalar251_output'],
-            intersall['sum_axis161_output'],
-           ]
-  reid_net = mx.sym.Group(inters)
-
-  return reid_net 
-
-
-
 def draw_inception_renet_v2():
   featdim = 256
   proxy_num = 1000
@@ -606,11 +263,13 @@ def CreateModel_Color_Split_test():
    return reid_feature, absdiff 
 
 
-def proxy_nca_loss_layer(batch_size):
+def proxy_nca_loss_layer(batch_size, proxy_num):
   reid_feature = mx.sym.Variable('reid_feature')
   proxy_yM = mx.sym.Variable('proxy_yM')
   proxy_Z = mx.sym.Variable(name='proxy_Z_weight')
   proxy_ZM = mx.sym.Variable('proxy_ZM')
+
+  reid_feature = mx.sym.Custom(data=reid_feature, proxy=proxy_Z, proxy_num=proxy_num, name='proxy_set', op_type='proxy_set')
 
   features = mx.sym.SliceChannel(reid_feature, axis=0, num_outputs=batch_size, name='features_slice')
   proxy_yMs = mx.sym.SliceChannel(proxy_yM, axis=0, num_outputs=batch_size, name='proxy_yM_slice')
@@ -623,12 +282,9 @@ def proxy_nca_loss_layer(batch_size):
   #norm
   if True:
     proxy_Znorm = mx.sym.sum_axis(proxy_Z**2, axis=1)
-#    print proxy_Znorm.name
     proxy_Znorm = mx.sym.sqrt(proxy_Znorm)
-#    print proxy_Znorm.name
     proxy_Znorm = mx.sym.Reshape(proxy_Znorm, shape=(-2, 1))
     proxy_Z = mx.sym.broadcast_div(proxy_Z, proxy_Znorm) * norm_value
-#    print proxy_Z.name
 
   for bi in xrange(batch_size):
     one_feat = features[bi]
@@ -646,30 +302,18 @@ def proxy_nca_loss_layer(batch_size):
     z = mx.sym.broadcast_minus(one_feat, proxy_Z)
     z = mx.sym.square(z)
     z = mx.sym.sum_axis(z, axis=1)
-#    print 'z:', z.name
     z = -z
-#    z = mx.sym.exp(z)
-#    print 'z:', z.name
-#    z = z * tzM
-#    z = mx.sym.sum(z)# + min_value 
-#    print 'z:', z.name
 
     tyM = mx.sym.Reshape(one_proxy_yM, shape=(-1, 1))
     one_proxy_y = mx.sym.broadcast_mul(tyM, proxy_Z)
     one_proxy_y = mx.sym.sum_axis(one_proxy_y, axis=0)
-#    print 'one_proxy_y:', one_proxy_y.name
     one_feat = mx.sym.Reshape(one_feat, shape=(-1,))
     y = one_feat - one_proxy_y
     y = mx.sym.square(y)
     y = mx.sym.sum(y)
-#    print 'y:', y.name
     y = -y
-#    y = mx.sym.exp(y) + min_value
-#    one_proxy_nca = -mx.sym.log(y/z)
 
-#    print 'z:', z.name, 'y:', y.name
     z_y = mx.sym.broadcast_minus(z, y)
-#    print z_y.name
     z_y = mx.sym.exp(z_y) * tzM
     z_y = mx.sym.sum(z_y)
     z_y = z_y + min_value
@@ -679,27 +323,18 @@ def proxy_nca_loss_layer(batch_size):
 
   proxy_nca = mx.sym.Concat(*proxy_ncas, dim=0)
   reid_net = proxy_nca 
-#  reid_net = proxy_nca
   reid_net = mx.sym.MakeLoss(reid_net, name='proxy_nca_loss')
 
-#  print args_all
   return reid_net
 
 
-def CreateModel_Color_Separate(ctx, batch_size, proxy_num, imagesize):
+def CreateModel_Color_Combine(ctx, batch_size, proxy_num, imagesize):
   print 'creating network color separate...'
   assert(imagesize[0]==299 and imagesize[1]==299)
   args_all = None
   reid_feature, args_all = create_inception_resnet_v2(data0, namepre='part1', args=args_all)  
-  reid_loss =  proxy_nca_loss_layer(batch_size):
+  reid_loss =  proxy_nca_loss_layer(batch_size, proxy_num):
   return reid_feature, reid_loss
-
-
-def CreateModel_Color_predict():
-   data1 = mx.sym.Variable('data')
-   args_all = None
-   reid_feature, args_all = create_inception_resnet_v2(data1, namepre='part1', args=args_all)
-   return reid_feature 
 
 
 if __name__=="__main__":
