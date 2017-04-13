@@ -3,6 +3,7 @@ import logging
 import mxnet as mx
 import numpy as np
 from collections import namedtuple
+import time
 
 
 # Parameter to pass to batch_end_callback
@@ -39,7 +40,7 @@ class Module_Info(object):
                inputs_need_grad=False,
                optimizer='sgd',
                optimizer_params={'learning_rate':0.1, 'momentum':0.9, 'wd':0.0005},
-               initializer=mx.init.Normal()
+               initializer=mx.init.Normal(),
                context=mx.cpu()):
     self.name = name
     self.symbol = symbol
@@ -71,8 +72,13 @@ class Module_Combine(object):
 
   def bind(self, for_training=False, grad_req='write'):
     for mod_inf, mod in zip(self.module_infos, self.modules):
-      mod.bind(data_shapes=mod_inf.data_shapes, 
-               label_shapes=mod_inf.label_shapes, 
+      datainfo = zip(mod_inf.data_names, mod_inf.data_shapes)
+      if mod_inf.label_names is None:
+        labelinfo = None
+      else:
+        labelinfo = zip(mod_inf.label_names, mod_inf.label_shapes)
+      mod.bind(data_shapes=datainfo, 
+               label_shapes=labelinfo, 
                inputs_need_grad=mod_inf.inputs_need_grad,
                for_training=for_training,
                grad_req=grad_req) 
@@ -80,7 +86,7 @@ class Module_Combine(object):
 
   def init_params(self, allow_missing=False, force_init=False):
     for mod_inf, mod in zip(self.module_infos, self.modules):
-      mod.init_params(initializer=mod_info.initializer, 
+      mod.init_params(initializer=mod_inf.initializer, 
                       allow_missing=allow_missing,
                       force_init=force_init)
 
@@ -101,14 +107,16 @@ class Module_Combine(object):
 
   def save_checkpoint(self, prefix, epoch):
     for mod_inf, mod in zip(self.module_infos, self.modules):
-      savename = '%s-%s-%04d'%(prefix, mod_inf.name, epoch)
+      savename = '%s-%s-%04d.params'%(prefix, mod_inf.name, epoch)
       mod.save_params(savename)
+      self.logger.info('Saved checkpoint to \"%s\"', savename)
     pass
 
   def load_checkpoint(self):
     for mod_inf, mod in zip(self.module_infos, self.modules):
-      savename = '%s-%s-%04d'%(prefix, mod_inf.name, epoch)
+      savename = '%s-%s-%04d.params'%(prefix, mod_inf.name, epoch)
       mod.load_params(savename)
+      self.logger.info('Loaded checkpoint from \"%s\"', savename)
     pass
 
   def init_optimizer(self, kvstore=None, force_init=False):
@@ -124,17 +132,23 @@ class Module_Combine(object):
 
     data = data_batch.data 
     label = None 
-    provide_data = zip(mod_inf0.data_names, mode_inf0.data_shapes)
-    provide_label = zip(mod_inf0.label_names, mode_inf0.label_shapes)
+    provide_data = zip(mod_inf0.data_names, mod_inf0.data_shapes)
+    if mod_inf0.label_names is None:
+      provide_label = None
+    else:
+      provide_label = zip(mod_inf0.label_names, mod_inf0.label_shapes)
     now_batch = mx.io.DataBatch(data=data, label=label, 
                                 provide_data=provide_data,
                                 provide_label=provide_label)
     mod0.forward(now_batch, is_train=is_train)
 
-    data = premod0.get_outputs(merge_multi_context=True)
+    data = mod0.get_outputs(merge_multi_context=True)
     label = data_batch.label 
-    provide_data = zip(mod_inf1.data_names, mode_inf1.data_shapes)
-    provide_label = zip(mod_inf1.label_names, mode_inf1.label_shapes)
+    provide_data = zip(mod_inf1.data_names, mod_inf1.data_shapes)
+    if mod_inf1.label_names is None:
+      provide_label = None 
+    else:
+      provide_label = zip(mod_inf1.label_names, mod_inf1.label_shapes)
     now_batch = mx.io.DataBatch(data=data, label=label, 
                                 provide_data=provide_data,
                                 provide_label=provide_label)
@@ -151,13 +165,17 @@ class Module_Combine(object):
  
 
   def forward_backward(self, data_batch):
-    self.forward(is_train=True)
+    self.forward(data_batch, is_train=True)
     self.backward()
 
   def update(self):
     for mod_inf, mod in zip(self.module_infos, self.modules):
       mod.update() 
     pass
+
+  def update_metric(self, eval_metric, labels):
+    modlast = self.modules[-1]
+    modlast.update_metric(eval_metric, labels)
 
   def fit(self, train_data, eval_data=None, eval_metric='acc',
           epoch_end_callback=None, batch_end_callback=None, kvstore=None,
@@ -172,7 +190,7 @@ class Module_Combine(object):
     if hasattr(train_data, 'layout_mapper'):
         self.layout_mapper = train_data.layout_mapper
  
-    self.bind(for_training=True, force_rebind=force_rebind)
+    self.bind(for_training=True)
 
     if monitor is not None:
         self.install_monitor(monitor)
@@ -181,8 +199,8 @@ class Module_Combine(object):
  
     if validation_metric is None:
         validation_metric = eval_metric
-    if not isinstance(eval_metric, metric.EvalMetric):
-        eval_metric = metric.create(eval_metric)
+    if not isinstance(eval_metric, mx.metric.EvalMetric):
+        eval_metric = mx.metric.create(eval_metric)
  
     ################################################################################
     # training loop

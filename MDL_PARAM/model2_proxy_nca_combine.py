@@ -328,12 +328,14 @@ def proxy_nca_loss_layer(batch_size, proxy_num):
   return reid_net
 
 
-def CreateModel_Color_Combine(ctx, batch_size, proxy_num, imagesize):
+def CreateModel_Color_Combine(ctx, batch_size, proxy_batch_size, proxy_num, imagesize):
   print 'creating network color separate...'
   assert(imagesize[0]==299 and imagesize[1]==299)
+
+  data0 = mx.sym.Variable('data')
   args_all = None
   reid_feature, args_all = create_inception_resnet_v2(data0, namepre='part1', args=args_all)  
-  reid_loss =  proxy_nca_loss_layer(batch_size, proxy_num):
+  reid_loss =  proxy_nca_loss_layer(proxy_batch_size, proxy_num)
   return reid_feature, reid_loss
 
 

@@ -39,10 +39,11 @@ def Do_Proxy_NCA_Train2():
   logger = logging.getLogger()
   logger.setLevel(logging.INFO)
   
-  ctxs0 = [mx.gpu(2), mx.gpu(3)]
-  ctxs1 = [mx.gpu(0), mx.gpu(1)]
+  mod_context0 = [mx.gpu(1), mx.gpu(2), mx.gpu(3)]
+  mod_context1 = [mx.gpu(0)]
   
-  devicenum = len(ctxs) 
+  devicenum = len(mod_context0) 
+  proxy_devicenum = len(mod_context1) 
 
   num_epoch = 10000
   batch_size = 32*devicenum
@@ -50,6 +51,7 @@ def Do_Proxy_NCA_Train2():
 
   assert(batch_size%devicenum==0)
   bsz_per_device = batch_size / devicenum
+  proxy_bsz_per_device = batch_size / proxy_devicenum
   print 'batch_size per device:', bsz_per_device
   bucket_key = bsz_per_device
 
@@ -58,13 +60,10 @@ def Do_Proxy_NCA_Train2():
   clsnum = proxy_num
   data_shape = (batch_size, 3, 299, 299)
   proxy_yM_shape = (batch_size, proxy_num)
-  proxy_Z_shape = (proxy_num, featdim)
   proxy_ZM_shape = (batch_size, proxy_num)
+  reid_feature_shape = (batch_size, featdim)
   label_shape = dict(zip(['proxy_yM', 'proxy_ZM'], [proxy_yM_shape, proxy_ZM_shape]))
-  proxyfn = 'proxy.bin'
   datafn = '/home/mingzhang/data/car_ReID_for_zhangming/data_each.list' #43928 calss number.
-#  datafn = '/home/mingzhang/data/car_ReID_for_zhangming/data_each.500.list'
-#  data_train = CarReID_Proxy2_Iter(['data'], [data_shape], ['proxy_yM', 'proxy_ZM'], [proxy_yM_shape, proxy_ZM_shape], datafn, bucket_key)
   data_train = CarReID_Proxy_Mxnet_Iter(['data'], [data_shape], ['proxy_yM', 'proxy_ZM'], [proxy_yM_shape, proxy_ZM_shape], datafn, bucket_key)
   
   dlr = 200000/batch_size
@@ -80,9 +79,9 @@ def Do_Proxy_NCA_Train2():
   print dlr_steps
   lr_scheduler = mx.lr_scheduler.MultiFactorScheduler(dlr_steps, lr_reduce)
 #  lr_scheduler = mx.lr_scheduler.FactorScheduler(dlr, 0.9)
-  param_prefix = 'MDL_PARAM/params2_proxy_nca/car_reid'
+  param_prefix = 'MDL_PARAM/params2_proxy_nca_combine/car_reid'
 
-  reid_feature, proxy_loss = proxy_nca_combine.CreateModel_Color_Combine(None, bsz_per_device, proxy_num, data_shape[2:])
+  reid_feature, proxy_loss = proxy_nca_combine.CreateModel_Color_Combine(None, bsz_per_device, proxy_bsz_per_device, proxy_num, data_shape[2:])
 
   optimizer_params={'learning_rate':lr_start,
                     'momentum':0.9,
@@ -93,15 +92,16 @@ def Do_Proxy_NCA_Train2():
 
   mod_info0 = Module_Info(name='reid_feature', symbol=reid_feature,
                           data_names=['data'], data_shapes=[data_shape],
-                          label_names=[], label_shapes=[],
-                          input_need_grad=False,
+                          label_names=None, label_shapes=None,
+                          inputs_need_grad=False,
                           optimizer='sgd',
                           optimizer_params=optimizer_params,
                           context=mod_context0) 
+
   mod_info1 = Module_Info(name='proxy_loss', symbol=proxy_loss,
-                          data_names=['reid_feature'], data_shapes=[data_shape],
+                          data_names=['reid_feature'], data_shapes=[reid_feature_shape],
                           label_names=['proxy_yM', 'proxy_ZM'], label_shapes=[proxy_yM_shape, proxy_ZM_shape],
-                          input_need_grad=True,
+                          inputs_need_grad=True,
                           optimizer='sgd',
                           optimizer_params=optimizer_params,
                           context=mod_context1)
@@ -130,19 +130,13 @@ def Do_Proxy_NCA_Train2():
     nbatch = args[0].nbatch + 1
     eval_metric = args[0].eval_metric
     data_batch = args[0].locals['data_batch']  
-#    if nbatch%show_period==0:
-#       fn = param_prefix + '_' + str(epoch%4) + '_' + '.bin'
-#       reid_model.save_params(fn)
-#       eval_metric.reset()
+    if nbatch%show_period==0:
+       reid_model.save_checkpoint(param_prefix, epoch%4)
 
   batch_end_calls = [batch_end_call, mx.callback.Speedometer(batch_size, show_period/10)]
   reid_model.fit(train_data=data_train, eval_metric=proxy_metric,
-                 optimizer='sgd',
-                 optimizer_params=optimizer_params, 
-                 initializer=mx.init.Normal(),
                  begin_epoch=0, num_epoch=num_epoch, 
                  eval_end_callback=None,
-                 kvstore=None,# monitor=mon,
                  batch_end_callback=batch_end_calls) 
 
 
