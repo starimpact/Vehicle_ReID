@@ -112,7 +112,7 @@ class Module_Combine(object):
       self.logger.info('Saved checkpoint to \"%s\"', savename)
     pass
 
-  def load_checkpoint(self):
+  def load_checkpoint(self, prefix, epoch):
     for mod_inf, mod in zip(self.module_infos, self.modules):
       savename = '%s-%s-%04d.params'%(prefix, mod_inf.name, epoch)
       mod.load_params(savename)
@@ -232,8 +232,8 @@ class Module_Combine(object):
         self.logger.info('Epoch[%d] Time cost=%.3f', epoch, (toc-tic))
  
         # sync aux params across devices
-        arg_params, aux_params = self.get_params()
-        self.set_params(arg_params, aux_params)
+        arg_aux_list = self.get_params()
+        self.set_params(arg_aux_list)
  
         if epoch_end_callback is not None:
             for callback in _as_list(epoch_end_callback):

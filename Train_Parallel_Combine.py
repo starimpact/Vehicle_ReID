@@ -110,12 +110,9 @@ def Do_Proxy_NCA_Train2():
 
   proxy_metric = Proxy_Metric()
 
-  if False:
-    fn = param_prefix + '_0_' + '.bin'
-    reid_model.bind(data_shapes=data_train.provide_data, 
-                    label_shapes=data_train.provide_label)
-    reid_model.load_params(fn)
-    print 'loaded parameters from', fn
+  if True:
+    reid_model.bind(for_training=True)
+    reid_model.load_checkpoint(param_prefix, 0)
 
 
   def norm_stat(d):
@@ -227,13 +224,9 @@ def Do_Proxy_NCA_Train3():
 
   proxy_metric = Proxy_Metric()
 
-  if False:
-    fn = param_prefix + '_0_' + '.bin'
-    reid_model.bind(data_shapes=data_train.provide_data, 
-                    label_shapes=data_train.provide_label)
-    reid_model.load_params(fn)
-    print 'loaded parameters from', fn
-
+  if True:
+    reid_model.bind(for_training=True)
+    reid_model.load_checkpoint(param_prefix, 0)
 
   def norm_stat(d):
     return mx.nd.norm(d)/np.sqrt(d.size)
@@ -265,7 +258,7 @@ def Do_Proxy_NCA_Train3():
 if __name__=='__main__':
 #  Do_Train()
 #  Do_Proxy_NCA_Train()
-#  Do_Proxy_NCA_Train2()
-  Do_Proxy_NCA_Train3()
+  Do_Proxy_NCA_Train2()
+#  Do_Proxy_NCA_Train3()
 
 
