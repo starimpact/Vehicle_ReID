@@ -150,14 +150,14 @@ def Do_Proxy_NCA_Train3():
   logger = logging.getLogger()
   logger.setLevel(logging.INFO)
   
-  mod_context0 = [mx.gpu(1), mx.gpu(2), mx.gpu(3)]
-  mod_context1 = [mx.gpu(0)]
+  mod_context0 = [mx.gpu(3)]
+  mod_context1 = [mx.gpu(2), mx.gpu(1), mx.gpu(0)]
  
   devicenum = len(mod_context0) 
   proxy_devicenum = len(mod_context1) 
 
   num_epoch = 10000
-  batch_size = 32*devicenum
+  batch_size = 30*devicenum
   show_period = 1000
 
   assert(batch_size%devicenum==0)
@@ -172,9 +172,10 @@ def Do_Proxy_NCA_Train3():
   data_shape = (batch_size, 3, 299, 299)
   proxy_yM_shape = (batch_size, proxy_num)
   proxy_ZM_shape = (batch_size, proxy_num)
+  reid_feature_shape = (batch_size, featdim)
   label_shape = dict(zip(['proxy_yM', 'proxy_ZM'], [proxy_yM_shape, proxy_ZM_shape]))
   proxyfn = 'proxy.bin'
-  datapath = '/mnt/data1/tiansida/data/ReID_origin/mingzhang/'
+  datapath = '/mnt/ssd2/minzhang/ReID_origin/mingzhang/'
   datafn_list = ['data_each_part1.list', 'data_each_part2.list', 'data_each_part3.list', 'data_each_part4.list', 'data_each_part5.list', 'data_each_part6.list', 'data_each_part7.list'] #43928 calss number.
   for di in xrange(len(datafn_list)):
     datafn_list[di] = datapath + datafn_list[di]
@@ -195,9 +196,9 @@ def Do_Proxy_NCA_Train3():
   print dlr_steps
   lr_scheduler = mx.lr_scheduler.MultiFactorScheduler(dlr_steps, lr_reduce)
 #  lr_scheduler = mx.lr_scheduler.FactorScheduler(dlr, 0.9)
-  param_prefix = 'MDL_PARAM/params2_proxy_nca/car_reid'
+  param_prefix = 'MDL_PARAM/params2_proxy_combine/car_reid'
 
-  reid_net = proxy_nca_combine.CreateModel_Color_Combine(None, bsz_per_device, proxy_bsz_per_device, proxy_num, data_shape[2:])
+  reid_feature, proxy_loss = proxy_nca_combine.CreateModel_Color_Combine(None, bsz_per_device, proxy_bsz_per_device, proxy_num, data_shape[2:])
 
   optimizer_params={'learning_rate':0.1,
                     'momentum':0.9,
@@ -264,7 +265,7 @@ def Do_Proxy_NCA_Train3():
 if __name__=='__main__':
 #  Do_Train()
 #  Do_Proxy_NCA_Train()
-  Do_Proxy_NCA_Train2()
-#  Do_Proxy_NCA_Train3()
+#  Do_Proxy_NCA_Train2()
+  Do_Proxy_NCA_Train3()
 
 
