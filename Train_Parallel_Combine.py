@@ -132,7 +132,7 @@ def Do_Proxy_NCA_Train2():
 
   batch_end_calls = [batch_end_call, mx.callback.Speedometer(batch_size, show_period/10)]
   reid_model.fit(train_data=data_train, eval_metric=proxy_metric,
-                 begin_epoch=20, num_epoch=num_epoch, 
+                 begin_epoch=21, num_epoch=num_epoch, 
                  eval_end_callback=None,
                  batch_end_callback=batch_end_calls) 
 

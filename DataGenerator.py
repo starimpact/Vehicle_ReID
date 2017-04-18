@@ -586,7 +586,7 @@ def get_data_label_proxy_mxnet_threads(data_infos, label_infos, datalist, data_r
   dataidx = 0
   datas = {}
   labels = {}
-  datas['data'] = np.zeros(data_infos[0][1], dtype=np.float32)
+  datas['data'] = None#np.zeros(data_infos[0][1], dtype=np.float32)
   labels['proxy_yM'] = np.zeros(label_infos[0][1], dtype=np.float32)
   labels['proxy_ZM'] = np.ones(label_infos[1][1], dtype=np.float32)
   
@@ -599,15 +599,17 @@ def get_data_label_proxy_mxnet_threads(data_infos, label_infos, datalist, data_r
     tmpaths.append(tmpath)
   
   aug_data = aug_threads_c(tmpaths, data_infos[0][1])
+  aug_data = aug_data.swapaxes(2, 3)
+  datas['data'] = aug_data.swapaxes(1, 2)
 
   #ready same data
   for si in xrange(batchsize):
     onecar = cars[si]
     carid = int(onecar['id'])
-    stdson = aug_data[si] 
-    datas['data'][si, 0] = stdson[:, :, 0]
-    datas['data'][si, 1] = stdson[:, :, 1]
-    datas['data'][si, 2] = stdson[:, :, 2]
+#    stdson = aug_data[si] 
+#    datas['data'][si, 0] = stdson[:, :, 0]
+#    datas['data'][si, 1] = stdson[:, :, 1]
+#    datas['data'][si, 2] = stdson[:, :, 2]
     labels['proxy_yM'][si, carid] = 1
     labels['proxy_ZM'][si, carid] = 0
   datas_nd = [mx.nd.array(datas['data'])]
@@ -723,7 +725,7 @@ def get_data_label_proxy_mxnet2_threads(data_infos, label_infos, datalist, data_
   dataidx = 0
   datas = {}
   labels = {}
-  datas['data'] = np.zeros(data_infos[0][1], dtype=np.float32)
+  datas['data'] = None #np.zeros(data_infos[0][1], dtype=np.float32)
   labels['proxy_yM'] = np.zeros(label_infos[0][1], dtype=np.float32)
   labels['proxy_ZM'] = np.ones(label_infos[1][1], dtype=np.float32)
   
@@ -737,17 +739,20 @@ def get_data_label_proxy_mxnet2_threads(data_infos, label_infos, datalist, data_
     tmpaths.append(tmpath)
  
   aug_data = aug_threads_c(tmpaths, data_infos[0][1])
+  aug_data = aug_data.swapaxes(2, 3)
+  datas['data'] = aug_data.swapaxes(1, 2)
+  
 
   #ready same data
   for si in xrange(batchsize):
     onecar = cars[si]
     carid = int(onecar['id'])
    
-    stdson = aug_data[si] 
-
-    datas['data'][si, 0] = stdson[:, :, 0]
-    datas['data'][si, 1] = stdson[:, :, 1]
-    datas['data'][si, 2] = stdson[:, :, 2]
+#    stdson = aug_data[si] 
+#
+#    datas['data'][si, 0] = stdson[:, :, 0]
+#    datas['data'][si, 1] = stdson[:, :, 1]
+#    datas['data'][si, 2] = stdson[:, :, 2]
     labels['proxy_yM'][si, carid] = 1
     labels['proxy_ZM'][si, carid] = 0
     if False:
