@@ -315,7 +315,8 @@ class CarReID_Proxy_Mxnet_Iter(mx.io.DataIter):
 
   def next(self):
     if self.cur_batch < self.num_batches:
-      datas, labels = dg.get_data_label_proxy_mxnet(self._provide_data, self._provide_label, self.datalist, self.rndidx_list, self.cur_batch) 
+#      datas, labels = dg.get_data_label_proxy_mxnet(self._provide_data, self._provide_label, self.datalist, self.rndidx_list, self.cur_batch) 
+      datas, labels = dg.get_data_label_proxy_mxnet_threads(self._provide_data, self._provide_label, self.datalist, self.rndidx_list, self.cur_batch) 
       self.cur_batch += 1
       return mx.io.DataBatch(datas, labels)
     else:

@@ -67,7 +67,7 @@ def Do_Feature_Test(restore, ctx=mx.cpu()):
   
 #  lr_scheduler = mx.lr_scheduler.FactorScheduler(dlr, 0.9)
 #  param_prefix = 'MDL_PARAM/params2_softmax/car_reid'
-  param_prefix = 'MDL_PARAM/params2_proxy_nca/car_reid'
+  param_prefix = 'MDL_PARAM/params2_proxy_nca_combine/car_reid'
   predictor_feature = CarReID_Feature_Predictor(param_prefix, reid_feature_net, ctx, data_shape)
 
   print 'Extracting feature...'
@@ -111,7 +111,7 @@ def Do_Compare_Test(restore, ctx=mx.cpu()):
   
 #  lr_scheduler = mx.lr_scheduler.FactorScheduler(dlr, 0.9)
 #  param_prefix = 'MDL_PARAM/params2_softmax/car_reid'
-  param_prefix = 'MDL_PARAM/params2_proxy_nca/car_reid'
+  param_prefix = 'MDL_PARAM/params2_proxy_nca_combine/car_reid'
   predictor_compare = CarReID_Compare_Predictor(param_prefix, reid_cmp_net, ctx, data_shape)
 
   print 'Comparing...'
@@ -155,7 +155,7 @@ def Do_Softmax_Test_Acc(ctx, resotre_whichone):
 
 if __name__=='__main__':
 #  Do_Test()
-  restore_whichone = 0
+  restore_whichone = 13
   ctx = mx.gpu(0)
 #  Do_Softmax_Test_Acc(ctx, restore_whichone)
   Do_Feature_Test(restore_whichone, ctx)
