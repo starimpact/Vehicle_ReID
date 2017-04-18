@@ -586,9 +586,9 @@ def get_data_label_proxy_mxnet_threads(data_infos, label_infos, datalist, data_r
   dataidx = 0
   datas = {}
   labels = {}
-  datas['data'] = None#np.zeros(data_infos[0][1], dtype=np.float32)
-  labels['proxy_yM'] = np.zeros(label_infos[0][1], dtype=np.float32)
-  labels['proxy_ZM'] = np.ones(label_infos[1][1], dtype=np.float32)
+  datas['data'] = mx.nd.zeros(data_infos[0][1], dtype=np.float32)
+  labels['proxy_yM'] = mx.nd.zeros(label_infos[0][1], dtype=np.float32)
+  labels['proxy_ZM'] = mx.nd.ones(label_infos[1][1], dtype=np.float32)
   
   tmpaths = []
   for si in xrange(batchsize):
@@ -600,20 +600,16 @@ def get_data_label_proxy_mxnet_threads(data_infos, label_infos, datalist, data_r
   
   aug_data = aug_threads_c(tmpaths, data_infos[0][1])
   aug_data = aug_data.swapaxes(2, 3)
-  datas['data'] = aug_data.swapaxes(1, 2)
+  datas['data'][:] = aug_data.swapaxes(1, 2)
 
   #ready same data
   for si in xrange(batchsize):
     onecar = cars[si]
     carid = int(onecar['id'])
-#    stdson = aug_data[si] 
-#    datas['data'][si, 0] = stdson[:, :, 0]
-#    datas['data'][si, 1] = stdson[:, :, 1]
-#    datas['data'][si, 2] = stdson[:, :, 2]
     labels['proxy_yM'][si, carid] = 1
     labels['proxy_ZM'][si, carid] = 0
-  datas_nd = [mx.nd.array(datas['data'])]
-  label_nd = [mx.nd.array(labels['proxy_yM']), mx.nd.array(labels['proxy_ZM'])]
+  datas_nd = [datas['data']]
+  label_nd = [labels['proxy_yM'], labels['proxy_ZM']]
   return datas_nd, label_nd
 
 
@@ -725,9 +721,9 @@ def get_data_label_proxy_mxnet2_threads(data_infos, label_infos, datalist, data_
   dataidx = 0
   datas = {}
   labels = {}
-  datas['data'] = None #np.zeros(data_infos[0][1], dtype=np.float32)
-  labels['proxy_yM'] = np.zeros(label_infos[0][1], dtype=np.float32)
-  labels['proxy_ZM'] = np.ones(label_infos[1][1], dtype=np.float32)
+  datas['data'] = mx.nd.zeros(data_infos[0][1], dtype=np.float32)
+  labels['proxy_yM'] = mx.nd.zeros(label_infos[0][1], dtype=np.float32)
+  labels['proxy_ZM'] = mx.nd.ones(label_infos[1][1], dtype=np.float32)
   
   tmpaths = []
   for si in xrange(batchsize):
@@ -740,26 +736,21 @@ def get_data_label_proxy_mxnet2_threads(data_infos, label_infos, datalist, data_
  
   aug_data = aug_threads_c(tmpaths, data_infos[0][1])
   aug_data = aug_data.swapaxes(2, 3)
-  datas['data'] = aug_data.swapaxes(1, 2)
+  datas['data'][:] = aug_data.swapaxes(1, 2)
   
 
   #ready same data
   for si in xrange(batchsize):
     onecar = cars[si]
     carid = int(onecar['id'])
-   
-#    stdson = aug_data[si] 
-#
-#    datas['data'][si, 0] = stdson[:, :, 0]
-#    datas['data'][si, 1] = stdson[:, :, 1]
-#    datas['data'][si, 2] = stdson[:, :, 2]
+
     labels['proxy_yM'][si, carid] = 1
     labels['proxy_ZM'][si, carid] = 0
     if False:
       imgsave = (stdson*255).astype(np.uint8)
       cv2.imwrite('tmpimg/stdson%d.jpg'%(int(carid)), imgsave)
-  datas_nd = [mx.nd.array(datas['data'])]
-  label_nd = [mx.nd.array(labels['proxy_yM']), mx.nd.array(labels['proxy_ZM'])]
+  datas_nd = [datas['data']]
+  label_nd = [labels['proxy_yM'], labels['proxy_ZM']]
   return datas_nd, label_nd
 
 
