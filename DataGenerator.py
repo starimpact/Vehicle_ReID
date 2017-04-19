@@ -3,6 +3,7 @@ import cv2
 import cPickle
 import os
 import mxnet as mx
+import time
 
 datafn = '/media/data1/mzhang/data/car_ReID_for_zhangming/data/data.list'
 
@@ -455,6 +456,11 @@ def get_normalization(img):
 
   return nimg
 
+
+
+  
+
+
 #format: path,imgname
 def get_data_label_proxy_mxnet(data_infos, label_infos, datalist, data_rndidx, batch_now, 
                    rndcrop=True, rndcont=False, rndnoise=False, rndrotate=True,
@@ -534,6 +540,81 @@ def get_data_label_proxy_mxnet(data_infos, label_infos, datalist, data_rndidx, b
   return datas_nd, label_nd
 
 
+from ctypes import *
+func_c = CDLL('./augmentation_threads/libaugment.so')
+def aug_threads_c(paths, tmpshape):
+  imgnum, chs, stdH, stdW = tmpshape 
+  imgsout = np.zeros((imgnum, stdH, stdW, chs), dtype=np.float32)
+  strs = (c_char_p*imgnum)()
+  strs[:] = paths
+#  t0 = time.time()
+  func_c.do_augment_threads(strs, imgnum, stdH, stdW,
+                 imgsout.ctypes.data_as(POINTER(c_float)))
+#  t1 = time.time()
+#  print t1-t0
+#  for i in xrange(imgnum):
+#    img = imgsout[i]
+#    cv2.imshow('hi', img)
+#    cv2.waitKey(0)
+  return imgsout
+
+
+#format: path,imgname
+def get_data_label_proxy_mxnet_threads(data_infos, label_infos, datalist, data_rndidx, batch_now, 
+                   rndcrop=True, rndcont=False, rndnoise=False, rndrotate=True,
+                   rndhflip=True, normalize=True):
+#  print label_infos
+  labelshape = label_infos[0][1]
+  batchsize = labelshape[0]
+  if (batch_now+1)*batchsize > len(datalist):
+    return None
+  
+  data_batch = []
+  for idx in data_rndidx[batch_now*batchsize:(batch_now+1)*batchsize]:
+    data_batch.append(datalist[idx])
+  cars = []
+  for onedata in data_batch:
+    onecar = {}
+    parts = onedata.split(',')
+    onecar['path'] = parts[0]
+    onecar['id'] = parts[0].split('/')[-1]
+#    print onecar['id']
+    onecar['son'] = parts[1]
+    cars.append(onecar)
+
+  stdsize = data_infos[0][1][2:]
+  dataidx = 0
+  datas = {}
+  labels = {}
+  datas['data'] = mx.nd.zeros(data_infos[0][1], dtype=np.float32)
+  labels['proxy_yM'] = mx.nd.zeros(label_infos[0][1], dtype=np.float32)
+  labels['proxy_ZM'] = mx.nd.ones(label_infos[1][1], dtype=np.float32)
+  
+  tmpaths = []
+  for si in xrange(batchsize):
+    onecar = cars[si]
+    carpath = onecar['path']
+    carson = onecar['son']
+    tmpath = carpath+'/'+carson
+    tmpaths.append(tmpath)
+  
+  aug_data = aug_threads_c(tmpaths, data_infos[0][1])
+  aug_data = aug_data.swapaxes(2, 3)
+  datas['data'][:] = aug_data.swapaxes(1, 2)
+
+  #ready same data
+  for si in xrange(batchsize):
+    onecar = cars[si]
+    carid = int(onecar['id'])
+    labels['proxy_yM'][si, carid] = 1
+    labels['proxy_ZM'][si, carid] = 0
+  datas_nd = [datas['data']]
+  label_nd = [labels['proxy_yM'], labels['proxy_ZM']]
+  return datas_nd, label_nd
+
+
+
+
 #format: path,imgname,idnumber
 def get_data_label_proxy_mxnet2(data_infos, label_infos, datalist, data_rndidx, batch_now, 
                    rndcrop=True, rndcont=False, rndnoise=False, rndrotate=True,
@@ -611,6 +692,67 @@ def get_data_label_proxy_mxnet2(data_infos, label_infos, datalist, data_rndidx, 
   datas_nd = [mx.nd.array(datas['data'])]
   label_nd = [mx.nd.array(labels['proxy_yM']), mx.nd.array(labels['proxy_ZM'])]
   return datas_nd, label_nd
+
+
+#format: path,imgname,idnumber
+def get_data_label_proxy_mxnet2_threads(data_infos, label_infos, datalist, data_rndidx, batch_now, 
+                   rndcrop=True, rndcont=False, rndnoise=False, rndrotate=True,
+                   rndhflip=True, normalize=True):
+#  print label_infos
+  labelshape = label_infos[0][1]
+  batchsize = labelshape[0]
+  if (batch_now+1)*batchsize > len(datalist):
+    return None
+  
+  data_batch = []
+  for idx in data_rndidx[batch_now*batchsize:(batch_now+1)*batchsize]:
+    data_batch.append(datalist[idx])
+  cars = []
+  for onedata in data_batch:
+    onecar = {}
+    parts = onedata.split(',')
+    onecar['path'] = parts[0]
+    onecar['id'] = parts[2]
+#    print onecar['id']
+    onecar['son'] = parts[1]
+    cars.append(onecar)
+
+  stdsize = data_infos[0][1][2:]
+  dataidx = 0
+  datas = {}
+  labels = {}
+  datas['data'] = mx.nd.zeros(data_infos[0][1], dtype=np.float32)
+  labels['proxy_yM'] = mx.nd.zeros(label_infos[0][1], dtype=np.float32)
+  labels['proxy_ZM'] = mx.nd.ones(label_infos[1][1], dtype=np.float32)
+  
+  tmpaths = []
+  for si in xrange(batchsize):
+    onecar = cars[si]
+    carpath = onecar['path']
+    carid = int(onecar['id'])
+    carson = onecar['son']
+    tmpath = carpath+'/'+carson
+    tmpaths.append(tmpath)
+ 
+  aug_data = aug_threads_c(tmpaths, data_infos[0][1])
+  aug_data = aug_data.swapaxes(2, 3)
+  datas['data'][:] = aug_data.swapaxes(1, 2)
+  
+
+  #ready same data
+  for si in xrange(batchsize):
+    onecar = cars[si]
+    carid = int(onecar['id'])
+
+    labels['proxy_yM'][si, carid] = 1
+    labels['proxy_ZM'][si, carid] = 0
+    if False:
+      imgsave = (stdson*255).astype(np.uint8)
+      cv2.imwrite('tmpimg/stdson%d.jpg'%(int(carid)), imgsave)
+  datas_nd = [datas['data']]
+  label_nd = [labels['proxy_yM'], labels['proxy_ZM']]
+  return datas_nd, label_nd
+
 
 
 #format: path,imgname

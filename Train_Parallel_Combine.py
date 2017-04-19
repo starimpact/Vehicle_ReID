@@ -147,14 +147,14 @@ def Do_Proxy_NCA_Train3():
   logger = logging.getLogger()
   logger.setLevel(logging.INFO)
   
-  mod_context0 = [mx.gpu(3)]
-  mod_context1 = [mx.gpu(2), mx.gpu(1), mx.gpu(0)]
+  mod_context0 = [mx.gpu(2), mx.gpu(3)]
+  mod_context1 = [mx.gpu(1), mx.gpu(0)]
  
   devicenum = len(mod_context0) 
   proxy_devicenum = len(mod_context1) 
 
   num_epoch = 10000
-  batch_size = 30*devicenum
+  batch_size = 27*devicenum
   show_period = 1000
 
   assert(batch_size%devicenum==0)
@@ -164,7 +164,7 @@ def Do_Proxy_NCA_Train3():
   bucket_key = bsz_per_device
 
   featdim = 128
-  proxy_num = 548597
+  proxy_num = 196166#548597
   clsnum = proxy_num
   data_shape = (batch_size, 3, 299, 299)
   proxy_yM_shape = (batch_size, proxy_num)
@@ -173,18 +173,19 @@ def Do_Proxy_NCA_Train3():
   label_shape = dict(zip(['proxy_yM', 'proxy_ZM'], [proxy_yM_shape, proxy_ZM_shape]))
   proxyfn = 'proxy.bin'
   datapath = '/mnt/ssd2/minzhang/ReID_origin/mingzhang/'
-  datafn_list = ['data_each_part1.list', 'data_each_part2.list', 'data_each_part3.list', 'data_each_part4.list', 'data_each_part5.list', 'data_each_part6.list', 'data_each_part7.list'] #43928 calss number.
+  #datafn_list = ['data_each_part1.list', 'data_each_part2.list', 'data_each_part3.list', 'data_each_part4.list', 'data_each_part5.list', 'data_each_part6.list', 'data_each_part7.list'] #43928 calss number.
+  datafn_list = ['data_each_part1.list', 'data_each_part2.list', 'data_each_part3.list'] #43928 calss number.
   for di in xrange(len(datafn_list)):
     datafn_list[di] = datapath + datafn_list[di]
 #  datafn = '/home/mingzhang/data/car_ReID_for_zhangming/data_each.500.list'
 #  data_train = CarReID_Proxy2_Iter(['data'], [data_shape], ['proxy_yM', 'proxy_ZM'], [proxy_yM_shape, proxy_ZM_shape], datafn, bucket_key)
   data_train = CarReID_Proxy_Mxnet_Iter2(['data'], [data_shape], ['proxy_yM', 'proxy_ZM'], [proxy_yM_shape, proxy_ZM_shape], datafn_list, bucket_key)
   
-  dlr = 200000/batch_size
+  dlr = 400000/batch_size
 #  dlr_steps = [dlr, dlr*2, dlr*3, dlr*4]
 
-  lr_start = 10**-1
-  lr_min = 10**-6
+  lr_start = 10**-2
+  lr_min = 10**-5
   lr_reduce = 0.9
   lr_stepnum = np.log(lr_min/lr_start)/np.log(lr_reduce)
   lr_stepnum = np.int(np.ceil(lr_stepnum))
@@ -193,11 +194,11 @@ def Do_Proxy_NCA_Train3():
   print dlr_steps
   lr_scheduler = mx.lr_scheduler.MultiFactorScheduler(dlr_steps, lr_reduce)
 #  lr_scheduler = mx.lr_scheduler.FactorScheduler(dlr, 0.9)
-  param_prefix = 'MDL_PARAM/params2_proxy_combine/car_reid'
+  param_prefix = 'MDL_PARAM/params2_proxy_nca_combine/car_reid'
 
   reid_feature, proxy_loss = proxy_nca_combine.CreateModel_Color_Combine(None, bsz_per_device, proxy_bsz_per_device, proxy_num, data_shape[2:])
 
-  optimizer_params={'learning_rate':0.1,
+  optimizer_params={'learning_rate':lr_start,
                     'momentum':0.9,
                     'wd':0.0005,
                     'lr_scheduler':lr_scheduler,
@@ -226,7 +227,7 @@ def Do_Proxy_NCA_Train3():
 
   if True:
     reid_model.bind(for_training=True)
-    reid_model.load_checkpoint(param_prefix, 0)
+    reid_model.load_checkpoint(param_prefix, 2)
 
   def norm_stat(d):
     return mx.nd.norm(d)/np.sqrt(d.size)
@@ -258,7 +259,7 @@ def Do_Proxy_NCA_Train3():
 if __name__=='__main__':
 #  Do_Train()
 #  Do_Proxy_NCA_Train()
-  Do_Proxy_NCA_Train2()
-#  Do_Proxy_NCA_Train3()
+#  Do_Proxy_NCA_Train2()
+  Do_Proxy_NCA_Train3()
 
 
