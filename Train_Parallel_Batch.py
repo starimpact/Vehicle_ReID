@@ -257,7 +257,7 @@ def Do_Proxy_NCA_Train3():
 
   featdim = 128
   total_proxy_num = 548597
-  proxy_batch = 20000
+  proxy_batch = 30000
   proxy_num = proxy_batch
   clsnum = proxy_num
   data_shape = (batch_size, 3, 299, 299)
@@ -276,8 +276,8 @@ def Do_Proxy_NCA_Train3():
 #  dlr_steps = [dlr, dlr*2, dlr*3, dlr*4]
 
   lr_start = (10**-1)
-  lr_min = 10**-6
-  lr_reduce = 0.9
+  lr_min = 10**-5
+  lr_reduce = 0.95
   lr_stepnum = np.log(lr_min/lr_start)/np.log(lr_reduce)
   lr_stepnum = np.int(np.ceil(lr_stepnum))
   dlr_steps = [dlr*i for i in xrange(1, lr_stepnum+1)]

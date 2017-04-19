@@ -499,8 +499,10 @@ class CarReID_Proxy_Batch_Mxnet_Iter2(mx.io.DataIter):
     self.big_epoch = 0
     self.proxy_num = proxy_num
     self.featdim = featdim
-    self.proxy_Z = np.ones((self.proxy_num, self.featdim), dtype=np.float32)
-    self.proxy_Z_p = np.ones((self.proxy_batchsize, self.featdim), dtype=np.float32)
+    proxy_Ztmp = np.random.rand(self.proxy_num, self.featdim)-0.5
+    self.proxy_Z = proxy_Ztmp.astype(np.float32) 
+    proxy_Z_ptmp = np.random.rand(self.proxy_batchsize, self.featdim)-0.5
+    self.proxy_Z_p = proxy_Z_ptmp.astype(np.float32)
     self.proxy_Z_map = np.zeros(self.proxy_batchsize, dtype=np.int32)-1
     self.do_reset()
 
@@ -516,13 +518,15 @@ class CarReID_Proxy_Batch_Mxnet_Iter2(mx.io.DataIter):
   def proxy_updateset(self, proxy_Z_p_new):
     num = np.sum(self.proxy_Z_map>-1)
     p_Z = proxy_Z_p_new.asnumpy()
+    self.proxy_Z_p[:] = p_Z
     for i in xrange(num):
       carid = self.proxy_Z_map[i]
       self.proxy_Z[carid] = p_Z[i]
     savename = 'proxy_Z.params'
     mx.nd.save(savename, [mx.nd.array(self.proxy_Z)])
-    a = self.proxy_Z
-    print 'save proxy_Z into file', savename#, a[a<1.0], a[a>1.0]
+#    a = self.proxy_Z
+#    a = p_Z
+    print 'save proxy_Z into file', savename#, a[a<0], a[a>0]
     pass
 
   def do_reset(self):
@@ -562,6 +566,7 @@ class CarReID_Proxy_Batch_Mxnet_Iter2(mx.io.DataIter):
       self.proxy_datalist.append(proxy_str)
 
     self.cur_proxy_batch += 1
+#    print self.proxy_Z_p, self.proxy_Z_p.sum()
     return len(carids), self.proxy_Z_p
 
   def __next__(self):
