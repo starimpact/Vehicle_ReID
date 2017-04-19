@@ -841,6 +841,73 @@ def get_data_label_proxy_batch_mxnet(data_infos, label_infos, datalist, batch_no
   return datas_nd, label_nd, carids, batch_info
 
 
+#format: path,imgname
+def get_data_label_proxy_batch_mxnet_threads(data_infos, label_infos, datalist, batch_now, 
+                   rndcrop=True, rndcont=False, rndnoise=False, rndrotate=True,
+                   rndhflip=True, normalize=True):
+#  print label_infos
+  labelshape = label_infos[0][1]
+  batchsize = labelshape[0]
+  if (batch_now+1)*batchsize > len(datalist):
+    return None
+  
+  data_batch = []
+  idlist = []
+  batch_info = []
+  for idx in xrange(batch_now*batchsize, (batch_now+1)*batchsize):
+    data_batch.append(datalist[idx])
+    idlist.append(idx)
+  cars = []
+  for idx, onedata in zip(idlist, data_batch):
+    onecar = {}
+    parts = onedata.split(',')
+    onecar['path'] = parts[0]
+    onecar['id'] = parts[-1] 
+#    print onecar['id']
+    onecar['son'] = parts[1]
+    cars.append(onecar)
+    carid = int(onecar['id'])
+    oneinfo = '%s,%s,%s'%(parts[0], parts[1], parts[2])
+    batch_info.append(oneinfo)
+
+  stdsize = data_infos[0][1][2:]
+  dataidx = 0
+  datas = {}
+  labels = {}
+  datas['data'] = mx.nd.zeros(data_infos[0][1], dtype=np.float32)
+  labels['proxy_yM'] = mx.nd.zeros(label_infos[0][1], dtype=np.float32)
+  labels['proxy_ZM'] = mx.nd.ones(label_infos[1][1], dtype=np.float32)
+  
+  tmpaths = []
+  carids = []
+  for si in xrange(batchsize):
+    onecar = cars[si]
+    carpath = onecar['path']
+    carid = int(onecar['id'])
+    carids.append(carid)
+    carson = onecar['son']
+    tmpath = carpath+'/'+carson
+    tmpaths.append(tmpath)
+ 
+  aug_data = aug_threads_c(tmpaths, data_infos[0][1])
+  aug_data = aug_data.swapaxes(2, 3)
+  datas['data'][:] = aug_data.swapaxes(1, 2)
+
+  #ready same data
+  for si in xrange(batchsize):
+    onecar = cars[si]
+    carid = int(onecar['id'])
+
+    labels['proxy_yM'][si, carid] = 1
+    labels['proxy_ZM'][si, carid] = 0
+    if False:
+      imgsave = (stdson*255).astype(np.uint8)
+      cv2.imwrite('tmpimg/stdson%d.jpg'%(int(carid)), imgsave)
+  datas_nd = [datas['data']]
+  label_nd = [labels['proxy_yM'], labels['proxy_ZM']]
+
+  return datas_nd, label_nd, carids, batch_info
+
 
 
 
