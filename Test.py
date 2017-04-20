@@ -46,6 +46,7 @@ def Do_Feature_Test(restore, ctx=mx.cpu()):
 
   fdir = '/home/mingzhang/data/car_ReID_for_zhangming/test_train'
   fdir = '/home/mingzhang/data/car_ReID_for_zhangming/test'
+  fdir = '/mnt/ssd2/minzhang/Re-ID_select'
 
   # set up logger
   logger = logging.getLogger()
@@ -87,6 +88,7 @@ def Do_Compare_Test(restore, ctx=mx.cpu()):
 
   fdir = '/home/mingzhang/data/car_ReID_for_zhangming/test_train'
   fdir = '/home/mingzhang/data/car_ReID_for_zhangming/test'
+  fdir = '/mnt/ssd2/minzhang/Re-ID_select'
 
   # set up logger
   logger = logging.getLogger()
