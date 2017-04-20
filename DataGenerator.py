@@ -570,12 +570,14 @@ def aug_threads_c2(paths, tmpshape, imgsout):
 #  print t1-t0
 #  for i in xrange(imgnum):
 #    img = imgsout[i]
+#    img = img.swapaxes(0, 1)
+#    img = img.swapaxes(1, 2)
 #    cv2.imshow('hi', img)
 #    cv2.waitKey(0)
 
 
 #format: path,imgname
-def get_data_label_proxy_mxnet_threads(data_infos, label_infos, datalist, data_rndidx, batch_now, 
+def get_data_label_proxy_mxnet_threads(data_infos, datas, label_infos, labels, datalist, data_rndidx, batch_now, 
                    rndcrop=True, rndcont=False, rndnoise=False, rndrotate=True,
                    rndhflip=True, normalize=True):
 #  print label_infos
@@ -599,11 +601,8 @@ def get_data_label_proxy_mxnet_threads(data_infos, label_infos, datalist, data_r
 
   stdsize = data_infos[0][1][2:]
   dataidx = 0
-  datas = {}
-  labels = {}
-  datas['data'] = mx.nd.zeros(data_infos[0][1], dtype=np.float32)
-  labels['proxy_yM'] = mx.nd.zeros(label_infos[0][1], dtype=np.float32)
-  labels['proxy_ZM'] = mx.nd.ones(label_infos[1][1], dtype=np.float32)
+  labels['proxy_yM'][:] = 0
+  labels['proxy_ZM'][:] = 1.0
   
   tmpaths = []
   for si in xrange(batchsize):
@@ -613,9 +612,9 @@ def get_data_label_proxy_mxnet_threads(data_infos, label_infos, datalist, data_r
     tmpath = carpath+'/'+carson
     tmpaths.append(tmpath)
   
-  aug_data = aug_threads_c(tmpaths, data_infos[0][1])
-  aug_data = aug_data.swapaxes(2, 3)
-  datas['data'][:] = aug_data.swapaxes(1, 2)
+  aug_data = datas['databuffer']
+  aug_threads_c2(tmpaths, data_infos[0][1], aug_data)
+  datas['data'][:] = aug_data
 
   #ready same data
   for si in xrange(batchsize):

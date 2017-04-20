@@ -46,7 +46,7 @@ def Do_Proxy_NCA_Train2():
   proxy_devicenum = len(mod_context1) 
 
   num_epoch = 10000
-  batch_size = 32*devicenum
+  batch_size = 50*devicenum
   show_period = 1000
 
   assert(batch_size%devicenum==0)
@@ -69,9 +69,9 @@ def Do_Proxy_NCA_Train2():
   dlr = 400000/batch_size
 #  dlr_steps = [dlr, dlr*2, dlr*3, dlr*4]
 
-  lr_start = (10**-4)
-  lr_min = 10**-6
-  lr_reduce = 0.9
+  lr_start = 0.6*(10**-4)
+  lr_min = 10**-5
+  lr_reduce = 0.95
   lr_stepnum = np.log(lr_min/lr_start)/np.log(lr_reduce)
   lr_stepnum = np.int(np.ceil(lr_stepnum))
   dlr_steps = [dlr*i for i in xrange(1, lr_stepnum+1)]
@@ -132,7 +132,7 @@ def Do_Proxy_NCA_Train2():
 
   batch_end_calls = [batch_end_call, mx.callback.Speedometer(batch_size, show_period/10)]
   reid_model.fit(train_data=data_train, eval_metric=proxy_metric,
-                 begin_epoch=21, num_epoch=num_epoch, 
+                 begin_epoch=50, num_epoch=num_epoch, 
                  eval_end_callback=None,
                  batch_end_callback=batch_end_calls) 
 
@@ -259,7 +259,7 @@ def Do_Proxy_NCA_Train3():
 if __name__=='__main__':
 #  Do_Train()
 #  Do_Proxy_NCA_Train()
-#  Do_Proxy_NCA_Train2()
-  Do_Proxy_NCA_Train3()
+  Do_Proxy_NCA_Train2()
+#  Do_Proxy_NCA_Train3()
 
 
