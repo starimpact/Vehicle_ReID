@@ -69,7 +69,7 @@ def Do_Proxy_NCA_Train2():
   dlr = 400000/batch_size
 #  dlr_steps = [dlr, dlr*2, dlr*3, dlr*4]
 
-  lr_start = (10**-4)
+  lr_start = 0.6*(10**-4)
   lr_min = 10**-5
   lr_reduce = 0.95
   lr_stepnum = np.log(lr_min/lr_start)/np.log(lr_reduce)
@@ -112,7 +112,7 @@ def Do_Proxy_NCA_Train2():
 
   if True:
     reid_model.bind(for_training=True)
-    reid_model.load_checkpoint(param_prefix, 2)
+    reid_model.load_checkpoint(param_prefix, 1)
 
 
   def norm_stat(d):
@@ -132,7 +132,7 @@ def Do_Proxy_NCA_Train2():
 
   batch_end_calls = [batch_end_call, mx.callback.Speedometer(batch_size, show_period/10)]
   reid_model.fit(train_data=data_train, eval_metric=proxy_metric,
-                 begin_epoch=43, num_epoch=num_epoch, 
+                 begin_epoch=50, num_epoch=num_epoch, 
                  eval_end_callback=None,
                  batch_end_callback=batch_end_calls) 
 
@@ -259,7 +259,7 @@ def Do_Proxy_NCA_Train3():
 if __name__=='__main__':
 #  Do_Train()
 #  Do_Proxy_NCA_Train()
-#  Do_Proxy_NCA_Train2()
-  Do_Proxy_NCA_Train3()
+  Do_Proxy_NCA_Train2()
+#  Do_Proxy_NCA_Train3()
 
 

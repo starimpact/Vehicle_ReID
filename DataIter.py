@@ -287,6 +287,12 @@ class CarReID_Proxy_Mxnet_Iter(mx.io.DataIter):
     self.batch_size = data_shapes[0][0]
     self._provide_data = zip(data_names, data_shapes)
     self._provide_label = zip(label_names, label_shapes)
+    self.datas_batch = {} 
+    self.datas_batch['data'] = mx.nd.zeros(data_shapes[0], dtype=np.float32)
+    self.datas_batch['databuffer'] = np.zeros(data_shapes[0], dtype=np.float32)
+    self.labels_batch = {}
+    self.labels_batch['proxy_yM'] = mx.nd.zeros(label_shapes[0], dtype=np.float32)
+    self.labels_batch['proxy_ZM'] = mx.nd.zeros(label_shapes[1], dtype=np.float32)
     self.cur_batch = 0
 #    self.datas_labels = self.data_label_gen(self._provide_data, self._provide_label) 
     self.datalist = dg.get_datalist(datafn)
@@ -317,7 +323,7 @@ class CarReID_Proxy_Mxnet_Iter(mx.io.DataIter):
   def next(self):
     if self.cur_batch < self.num_batches:
 #      datas, labels = dg.get_data_label_proxy_mxnet(self._provide_data, self._provide_label, self.datalist, self.rndidx_list, self.cur_batch) 
-      datas, labels = dg.get_data_label_proxy_mxnet_threads(self._provide_data, self._provide_label, self.datalist, self.rndidx_list, self.cur_batch) 
+      datas, labels = dg.get_data_label_proxy_mxnet_threads(self._provide_data, self.datas_batch, self._provide_label, self.labels_batch, self.datalist, self.rndidx_list, self.cur_batch) 
       self.cur_batch += 1
       return mx.io.DataBatch(datas, labels)
     else:
