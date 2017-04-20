@@ -526,7 +526,7 @@ class CarReID_Proxy_Batch_Mxnet_Iter2(mx.io.DataIter):
     mx.nd.save(savename, [mx.nd.array(self.proxy_Z)])
 #    a = self.proxy_Z
 #    a = p_Z
-    print 'save proxy_Z into file', savename#, a[a<0], a[a>0]
+    print 'save proxy_Z into file', savename#, a#, a[a<0], a[a>0]
     pass
 
   def do_reset(self):

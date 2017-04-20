@@ -31,6 +31,9 @@ def load_checkpoint(model, prefix, epoch):
     for k, value in save_dict.items():
         arg_type, name = k.split(':', 1)
         if name=='proxy_Z_weight':
+            sp = value.shape
+            rndv = np.random.rand(*sp)-0.5
+            arg_params[name] = mx.nd.array(rndv)
             print 'skipped %s...'%name
             continue
         if arg_type == 'arg':
@@ -48,7 +51,7 @@ def load_checkpoint(model, prefix, epoch):
 class Proxy_Metric(metric.EvalMetric):
   def __init__(self, saveperiod=1, batch_hardidxes=[]):
     print "hello metric init..."
-    super(Proxy_Metric, self).__init__('proxy_metric', 3)
+    super(Proxy_Metric, self).__init__('proxy_metric', 1)
     self.p_inst = 0
     self.saveperiod=saveperiod
     self.batch_hardidxes = batch_hardidxes
@@ -61,9 +64,9 @@ class Proxy_Metric(metric.EvalMetric):
     eachloss = preds[0].asnumpy()
     loss = eachloss.mean()
     self.sum_metric[0] += loss
-    self.sum_metric[1] += np.sum(eachloss<=0.0)
-    self.sum_metric[2] += np.sum(eachloss>0.0)
-    if loss < 0: self.batch_hardidxes[:] = eachloss
+#    self.sum_metric[1] += np.sum(eachloss<=0.0)
+#    self.sum_metric[2] += np.sum(eachloss>0.0)
+#    if loss < 0: self.batch_hardidxes[:] = eachloss
 #    for bi in xrange(len(eachloss)):
 #      oneloss = eachloss[bi]
 #      if oneloss*5 > loss:#store harder example
@@ -82,13 +85,13 @@ def do_batch_end_call(reid_model, param_prefix, \
     train_data = args[0].locals['train_data']  
     #expand the hard examples set
 #    print 'batch_hardidxes:', batch_hardidxes
-    for hi,loss in enumerate(batch_hardidxes):
-      hexp = train_data.batch_infos[hi]
-      if not train_data.all_hardexps.has_key(hexp):
-        train_data.all_hardexps[hexp] = loss
-      else:
-        train_data.all_hardexps[hexp] += loss
-    batch_hardidxes[:] = []
+#    for hi,loss in enumerate(batch_hardidxes):
+#      hexp = train_data.batch_infos[hi]
+#      if not train_data.all_hardexps.has_key(hexp):
+#        train_data.all_hardexps[hexp] = loss
+#      else:
+#        train_data.all_hardexps[hexp] += loss
+#    batch_hardidxes[:] = []
 
     if nbatch%show_period==0:
        save_checkpoint(reid_model, param_prefix, epoch%4)
@@ -275,7 +278,7 @@ def Do_Proxy_NCA_Train3():
   dlr = 800000/batch_size
 #  dlr_steps = [dlr, dlr*2, dlr*3, dlr*4]
 
-  lr_start = (10**-1)
+  lr_start = (10**-2)
   lr_min = 10**-5
   lr_reduce = 0.95
   lr_stepnum = np.log(lr_min/lr_start)/np.log(lr_reduce)
@@ -285,7 +288,7 @@ def Do_Proxy_NCA_Train3():
   print dlr_steps
   lr_scheduler = mx.lr_scheduler.MultiFactorScheduler(dlr_steps, lr_reduce)
   param_prefix = 'MDL_PARAM/params2_proxy_nca/car_reid'
-  load_paramidx = None
+  load_paramidx = 0
 
   reid_net = proxy_nca_model.CreateModel_Color2(None, bsz_per_device, proxy_num, data_shape[2:])
 
