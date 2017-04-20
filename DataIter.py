@@ -506,6 +506,7 @@ class CarReID_Proxy_Batch_Mxnet_Iter2(mx.io.DataIter):
     if os.path.exists(self.proxy_Z_fn):
       tmpZ = mx.nd.load(self.proxy_Z_fn)
       self.proxy_Z = tmpZ[0].asnumpy()
+      assert(self.proxy_num==tmpZ[0].shape[0])
       print 'load proxy_Z from', self.proxy_Z_fn
     proxy_Z_ptmp = np.random.rand(self.proxy_batchsize, self.featdim)-0.5
     self.proxy_Z_p = proxy_Z_ptmp.astype(np.float32)

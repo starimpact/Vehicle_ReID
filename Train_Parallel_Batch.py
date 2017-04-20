@@ -102,11 +102,12 @@ def do_epoch_end_call(param_prefix, epoch, reid_model, \
                       arg_params, aux_params, \
                       reid_model_P, data_train, \
                       proxy_num, proxy_batch):
-    if True:
+    if epoch is not None:
        save_checkpoint(reid_model, param_prefix, epoch%4)
 
     proxy_Z_now = arg_params['proxy_Z_weight']
-    data_train.proxy_updateset(proxy_Z_now)
+    if epoch is not None:
+      data_train.proxy_updateset(proxy_Z_now)
     carnum, proxy_Zfeat = data_train.do_reset()
 
 #    print 'hello end epoch...ready next proxy batch data and init the proxy_Z_weight...cars id number:%d, proxy_num=%d, proxy_batchsize=%d'%(carnum, proxy_num, proxy_batch)
@@ -250,7 +251,7 @@ def Do_Proxy_NCA_Train3():
   devicenum = len(ctxs) 
 
   num_epoch = 1000000
-  batch_size = 40*devicenum
+  batch_size = 32*devicenum
   show_period = 1000
 
   assert(batch_size%devicenum==0)
@@ -259,8 +260,8 @@ def Do_Proxy_NCA_Train3():
   bucket_key = bsz_per_device
 
   featdim = 128
-  total_proxy_num = 548597
-  proxy_batch = 30000
+  total_proxy_num = 406448#548597
+  proxy_batch = 40000
   proxy_num = proxy_batch
   clsnum = proxy_num
   data_shape = (batch_size, 3, 299, 299)
@@ -270,7 +271,8 @@ def Do_Proxy_NCA_Train3():
   label_shape = dict(zip(['proxy_yM', 'proxy_ZM'], [proxy_yM_shape, proxy_ZM_shape]))
   proxyfn = 'proxy.bin'
   datapath = '/mnt/ssd2/minzhang//ReID_origin/mingzhang/'
-  datafn_list = ['data_each_part1.list', 'data_each_part2.list', 'data_each_part3.list', 'data_each_part4.list', 'data_each_part5.list', 'data_each_part6.list', 'data_each_part7.list'] #43928 calss number.
+#  datafn_list = ['data_each_part1.list', 'data_each_part2.list', 'data_each_part3.list', 'data_each_part4.list', 'data_each_part5.list', 'data_each_part6.list', 'data_each_part7.list'] #43928 calss number.
+  datafn_list = ['data_each_part1.list', 'data_each_part2.list', 'data_each_part3.list', 'data_each_part4.list', 'data_each_part5.list'] #43928 calss number.
   for di in xrange(len(datafn_list)):
     datafn_list[di] = datapath + datafn_list[di]
   data_train = CarReID_Proxy_Batch_Mxnet_Iter2(['data'], [data_shape], ['proxy_yM', 'proxy_ZM'], [proxy_yM_shape, proxy_ZM_shape], datafn_list, total_proxy_num, featdim, proxy_batch)
@@ -288,7 +290,7 @@ def Do_Proxy_NCA_Train3():
   print dlr_steps
   lr_scheduler = mx.lr_scheduler.MultiFactorScheduler(dlr_steps, lr_reduce)
   param_prefix = 'MDL_PARAM/params2_proxy_nca/car_reid'
-  load_paramidx = 0
+  load_paramidx = None 
 
   reid_net = proxy_nca_model.CreateModel_Color2(None, bsz_per_device, proxy_num, data_shape[2:])
 
@@ -329,7 +331,7 @@ def Do_Proxy_NCA_Train3():
     reid_model.bind(data_shapes=data_train.provide_data, 
                     label_shapes=data_train.provide_label)
     arg_params, aux_params = load_checkpoint(reid_model, param_prefix, load_paramidx)
-    epoch_end_call(0, None, arg_params, aux_params)
+    epoch_end_call(None, None, arg_params, aux_params)
 
 
   batch_end_calls = [batch_end_call, mx.callback.Speedometer(batch_size, show_period/10)]
