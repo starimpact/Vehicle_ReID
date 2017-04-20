@@ -485,6 +485,12 @@ class CarReID_Proxy_Batch_Mxnet_Iter2(mx.io.DataIter):
     self.batch_size = data_shapes[0][0]
     self._provide_data = zip(data_names, data_shapes)
     self._provide_label = zip(label_names, label_shapes)
+    self.datas_batch = {} 
+    self.datas_batch['data'] = mx.nd.zeros(data_shapes[0], dtype=np.float32)
+    self.datas_batch['databuffer'] = np.zeros(data_shapes[0], dtype=np.float32)
+    self.labels_batch = {}
+    self.labels_batch['proxy_yM'] = mx.nd.zeros(label_shapes[0], dtype=np.float32)
+    self.labels_batch['proxy_ZM'] = mx.nd.zeros(label_shapes[1], dtype=np.float32)
     self.cur_batch = 0
     self.datalist = dg.get_datalist2(datafn)
     self.datalen = len(self.datalist)
@@ -506,6 +512,7 @@ class CarReID_Proxy_Batch_Mxnet_Iter2(mx.io.DataIter):
     if os.path.exists(self.proxy_Z_fn):
       tmpZ = mx.nd.load(self.proxy_Z_fn)
       self.proxy_Z = tmpZ[0].asnumpy()
+      assert(self.proxy_num==tmpZ[0].shape[0])
       print 'load proxy_Z from', self.proxy_Z_fn
     proxy_Z_ptmp = np.random.rand(self.proxy_batchsize, self.featdim)-0.5
     self.proxy_Z_p = proxy_Z_ptmp.astype(np.float32)
@@ -593,7 +600,7 @@ class CarReID_Proxy_Batch_Mxnet_Iter2(mx.io.DataIter):
   def next(self):
     if self.cur_batch < self.num_batches:
 #      datas, labels, carids, infos = dg.get_data_label_proxy_batch_mxnet(self._provide_data, self._provide_label, self.proxy_datalist, self.cur_batch) 
-      datas, labels, carids, infos = dg.get_data_label_proxy_batch_mxnet_threads(self._provide_data, self._provide_label, self.proxy_datalist, self.cur_batch) 
+      datas, labels, carids, infos = dg.get_data_label_proxy_batch_mxnet_threads(self._provide_data, self.datas_batch, self._provide_label, self.labels_batch, self.proxy_datalist, self.cur_batch) 
       self.batch_carids = carids
       self.batch_infos = infos
       self.cur_batch += 1

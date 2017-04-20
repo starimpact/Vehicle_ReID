@@ -15,6 +15,7 @@ struct Aug_Params
   int *p_FinishCount;
   int needNum;
   int stdsize[2];
+  float *pfImgOut;
 };
 
 int showimage()
@@ -66,20 +67,21 @@ extern "C" int do_augment_threads(char *pfns[], int num,
     pParams[fi].needNum = fnum;
     pParams[fi].stdsize[0] = stdH;
     pParams[fi].stdsize[1] = stdW;
+    pParams[fi].pfImgOut = pfImgOut + fi * stdH * stdW * 3;
     psPool->enqueue(do_augment_onethread, (void*)&pParams[fi]);
   }
 
   unique_lock<mutex> waitlc(countmt);
   cv.wait(waitlc, [&dwFinishCount, &fnum](){return dwFinishCount==fnum;});
 
-  for (int fi = 0; fi < fnum; fi++)
-  {
-    cv::Mat &img = pParams[fi].matOut;
-    memcpy(pfImgOut + fi * stdH * stdW * 3,  
-           img.data, sizeof(float) * stdH * stdW * 3);
-//    cv::imshow("hi", img);
-//    cv::waitKey(0);
-  }
+//  for (int fi = 0; fi < fnum; fi++)
+//  {
+//    cv::Mat &img = pParams[fi].matOut;
+//    memcpy(pfImgOut + fi * stdH * stdW * 3,  
+//           img.data, sizeof(float) * stdH * stdW * 3);
+////    cv::imshow("hi", img);
+////    cv::waitKey(0);
+//  }
 
   delete []pParams;
   return 0;
@@ -102,6 +104,7 @@ void do_augment_onethread(void *p)
   int stdH = pParam->stdsize[0];
   int stdW = pParam->stdsize[1];
   cv::Mat &matOut = pParam->matOut;
+  float *pfImgOut = pParam->pfImgOut;
 
   cv::Mat img = cv::imread(strfn);
   if (img.cols==0)
@@ -137,7 +140,22 @@ void do_augment_onethread(void *p)
   {
     cv::flip(img, img, 1);
   }
-  img.copyTo(matOut);
+//  img.copyTo(matOut);
+  float *pfImg = (float*)img.data;
+
+  float *pfOutR = pfImgOut;
+  float *pfOutG = pfImgOut + stdH * stdW;
+  float *pfOutB = pfImgOut + stdH * stdW * 2;
+  for (int ri = 0; ri < stdH; ri++)
+  {
+    for (int ci = 0; ci < stdW; ci++)
+    {
+       int dwOft = ri * stdW + ci;
+       pfOutR[dwOft] = pfImg[dwOft * 3 + 0];
+       pfOutG[dwOft] = pfImg[dwOft * 3 + 1];
+       pfOutB[dwOft] = pfImg[dwOft * 3 + 2];
+    }
+  }
 
   unique_lock<mutex> countlc(*p_countmt);
   if (*p_FinishCount < needNum)
