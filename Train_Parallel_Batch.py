@@ -244,8 +244,8 @@ def Do_Proxy_NCA_Train3():
   logger.setLevel(logging.INFO)
   
 
-#  ctxs = [mx.gpu(0), mx.gpu(1), mx.gpu(2), mx.gpu(3), mx.gpu(4), mx.gpu(5), mx.gpu(6), mx.gpu(7)]
-  ctxs = [mx.gpu(0), mx.gpu(1), mx.gpu(2), mx.gpu(3)]
+  ctxs = [mx.gpu(0), mx.gpu(1), mx.gpu(2), mx.gpu(3), mx.gpu(4), mx.gpu(5), mx.gpu(6), mx.gpu(7)]
+#  ctxs = [mx.gpu(0), mx.gpu(1), mx.gpu(2), mx.gpu(3)]
 #  ctxs = [mx.gpu(2), mx.gpu(1), mx.gpu(3)]
 #  ctxs = [mx.gpu(0), mx.gpu(1)]
 #  ctxs = [mx.gpu(0)]
@@ -262,7 +262,7 @@ def Do_Proxy_NCA_Train3():
   bucket_key = bsz_per_device
 
   featdim = 128
-  total_proxy_num = 196166#406448#548597
+  total_proxy_num = 406448#548597
   proxy_batch = 40000
   proxy_num = proxy_batch
   clsnum = proxy_num
@@ -272,11 +272,11 @@ def Do_Proxy_NCA_Train3():
   proxy_ZM_shape = (batch_size, proxy_num)
   label_shape = dict(zip(['proxy_yM', 'proxy_ZM'], [proxy_yM_shape, proxy_ZM_shape]))
   proxyfn = 'proxy.bin'
-  datapath = '/mnt/ssd2/minzhang//ReID_origin/mingzhang/'
+  datapath = '/home/mingzhang/data/ReID_origin/mingzhang/'
 
 #  datafn_list = ['data_each_part1.list', 'data_each_part2.list', 'data_each_part3.list', 'data_each_part4.list', 'data_each_part5.list', 'data_each_part6.list', 'data_each_part7.list'] #43928 calss number.
-#  datafn_list = ['data_each_part1.list', 'data_each_part2.list', 'data_each_part3.list', 'data_each_part4.list', 'data_each_part5.list'] #406448 calss number.
-  datafn_list = ['data_each_part1.list', 'data_each_part2.list', 'data_each_part3.list'] #196166 calss number.
+  datafn_list = ['data_each_part1.list', 'data_each_part2.list', 'data_each_part3.list', 'data_each_part4.list', 'data_each_part5.list'] #406448 calss number.
+#  datafn_list = ['data_each_part1.list', 'data_each_part2.list', 'data_each_part3.list'] #196166 calss number.
   for di in xrange(len(datafn_list)):
     datafn_list[di] = datapath + datafn_list[di]
   data_train = CarReID_Proxy_Batch_Mxnet_Iter2(['data'], [data_shape], ['proxy_yM', 'proxy_ZM'], [proxy_yM_shape, proxy_ZM_shape], datafn_list, total_proxy_num, featdim, proxy_batch)
@@ -284,7 +284,7 @@ def Do_Proxy_NCA_Train3():
   dlr = 800000/batch_size
 #  dlr_steps = [dlr, dlr*2, dlr*3, dlr*4]
 
-  lr_start = (10**-1)
+  lr_start = (10**-3)
   lr_min = 10**-5
   lr_reduce = 0.95
   lr_stepnum = np.log(lr_min/lr_start)/np.log(lr_reduce)
