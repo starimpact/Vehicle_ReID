@@ -109,7 +109,7 @@ def do_epoch_end_call(param_prefix, epoch, reid_model, \
     data_train.proxy_updateset(proxy_Z_now)
     carnum, proxy_Zfeat = data_train.do_reset()
 
-    print 'hello end epoch...ready next proxy batch data and init the proxy_Z_weight...cars id number:%d, proxy_num=%d, proxy_batchsize=%d'%(carnum, proxy_num, proxy_batch)
+#    print 'hello end epoch...ready next proxy batch data and init the proxy_Z_weight...cars id number:%d, proxy_num=%d, proxy_batchsize=%d'%(carnum, proxy_num, proxy_batch)
 #    print proxy_Zfeat.mean()
     proxy_Z_now[:] = proxy_Zfeat
     reid_model.set_params(arg_params, aux_params)
@@ -278,7 +278,7 @@ def Do_Proxy_NCA_Train3():
   dlr = 800000/batch_size
 #  dlr_steps = [dlr, dlr*2, dlr*3, dlr*4]
 
-  lr_start = (10**-2)
+  lr_start = (10**-1)
   lr_min = 10**-5
   lr_reduce = 0.95
   lr_stepnum = np.log(lr_min/lr_start)/np.log(lr_reduce)

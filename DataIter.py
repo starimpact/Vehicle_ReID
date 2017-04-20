@@ -547,9 +547,7 @@ class CarReID_Proxy_Batch_Mxnet_Iter2(mx.io.DataIter):
       self.big_epoch += 1
       self.rndidx_list = np.random.permutation(self.datalen)
   
-    print 'getting another proxy batch to train(%d/%d, %d/%d) [big_epoch=%d]...'%(\
-         self.proxy_batchsize, self.datalen, self.cur_proxy_batch+1,\
-         self.num_proxy_batch, self.big_epoch)
+
 
     self.proxy_datalist = []
     carids = {}
@@ -571,9 +569,14 @@ class CarReID_Proxy_Batch_Mxnet_Iter2(mx.io.DataIter):
       proxy_str = '%s,%s,%s,%s'%(path, son, carid, str(proxyid))
       self.proxy_datalist.append(proxy_str)
 
+    caridnum = len(carids)
+    print 'got another proxy batch to train(%d/%d/%d, %d/%d) [big_epoch=%d]...'%(\
+         caridnum, self.proxy_batchsize, self.datalen, self.cur_proxy_batch+1,\
+         self.num_proxy_batch, self.big_epoch)
+
     self.cur_proxy_batch += 1
 #    print self.proxy_Z_p, self.proxy_Z_p.sum()
-    return len(carids), self.proxy_Z_p
+    return caridnum, self.proxy_Z_p
 
   def __next__(self):
     return self.next()
