@@ -570,6 +570,8 @@ def aug_threads_c2(paths, tmpshape, imgsout):
 #  print t1-t0
 #  for i in xrange(imgnum):
 #    img = imgsout[i]
+#    img = img.swapaxes(0, 1)
+#    img = img.swapaxes(1, 2)
 #    cv2.imshow('hi', img)
 #    cv2.waitKey(0)
 

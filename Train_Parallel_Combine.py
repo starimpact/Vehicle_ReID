@@ -46,7 +46,7 @@ def Do_Proxy_NCA_Train2():
   proxy_devicenum = len(mod_context1) 
 
   num_epoch = 10000
-  batch_size = 32*devicenum
+  batch_size = 50*devicenum
   show_period = 1000
 
   assert(batch_size%devicenum==0)
