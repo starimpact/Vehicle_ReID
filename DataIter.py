@@ -2,6 +2,7 @@ import numpy as np
 import mxnet as mx 
 import DataGenerator as dg 
 import operator
+import os
 
 datafn = '/media/data1/mzhang/data/car_ReID_for_zhangming/data.list'
 datafn = '/home/mingzhang/data/car_ReID_for_zhangming/data.list'
@@ -499,8 +500,13 @@ class CarReID_Proxy_Batch_Mxnet_Iter2(mx.io.DataIter):
     self.big_epoch = 0
     self.proxy_num = proxy_num
     self.featdim = featdim
+    self.proxy_Z_fn = './proxy_Z.params'
     proxy_Ztmp = np.random.rand(self.proxy_num, self.featdim)-0.5
     self.proxy_Z = proxy_Ztmp.astype(np.float32) 
+    if os.path.exists(self.proxy_Z_fn):
+      tmpZ = mx.nd.load(self.proxy_Z_fn)
+      self.proxy_Z = tmpZ[0].asnumpy()
+      print 'load proxy_Z from', self.proxy_Z_fn
     proxy_Z_ptmp = np.random.rand(self.proxy_batchsize, self.featdim)-0.5
     self.proxy_Z_p = proxy_Z_ptmp.astype(np.float32)
     self.proxy_Z_map = np.zeros(self.proxy_batchsize, dtype=np.int32)-1
@@ -522,7 +528,7 @@ class CarReID_Proxy_Batch_Mxnet_Iter2(mx.io.DataIter):
     for i in xrange(num):
       carid = self.proxy_Z_map[i]
       self.proxy_Z[carid] = p_Z[i]
-    savename = 'proxy_Z.params'
+    savename = self.proxy_Z_fn 
     mx.nd.save(savename, [mx.nd.array(self.proxy_Z)])
 #    a = self.proxy_Z
 #    a = p_Z
