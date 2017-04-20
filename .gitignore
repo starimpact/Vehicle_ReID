@@ -5,3 +5,4 @@ Result
 ImageResult
 *.bin
 tmpimg
+augmentation_threads/build
