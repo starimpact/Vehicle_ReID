@@ -860,7 +860,7 @@ def get_data_label_proxy_batch_mxnet(data_infos, label_infos, datalist, batch_no
 
 
 #format: path,imgname
-def get_data_label_proxy_batch_mxnet_threads(data_infos, datas, label_infos, labels, datalist, batch_now, 
+def get_data_label_proxy_batch_mxnet_threads(data_infos, datas, label_infos, labels, datalist, batch_now, caridnum,
                    rndcrop=True, rndcont=False, rndnoise=False, rndrotate=True,
                    rndhflip=True, normalize=True):
 #  print label_infos
@@ -924,6 +924,7 @@ def get_data_label_proxy_batch_mxnet_threads(data_infos, datas, label_infos, lab
 
     labels['proxy_yM'][si, carid] = 1
     labels['proxy_ZM'][si, carid] = 0
+    labels['proxy_ZM'][si, caridnum:] = 0
     if False:
       imgsave = (stdson*255).astype(np.uint8)
       cv2.imwrite('tmpimg/stdson%d.jpg'%(int(carid)), imgsave)
