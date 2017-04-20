@@ -691,7 +691,7 @@ def CreateModel_Color_Separate(ctx, batch_size, proxy_num, imagesize):
   assert(imagesize[0]==299 and imagesize[1]==299)
   args_all = None
   reid_feature, args_all = create_inception_resnet_v2(data0, namepre='part1', args=args_all)  
-  reid_loss =  proxy_nca_loss_layer(batch_size):
+  reid_loss =  proxy_nca_loss_layer(batch_size)
   return reid_feature, reid_loss
 
 

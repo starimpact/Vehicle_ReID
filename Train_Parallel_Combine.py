@@ -66,10 +66,10 @@ def Do_Proxy_NCA_Train2():
   datafn = '/home/mingzhang/data/car_ReID_for_zhangming/data_each.list' #43928 calss number.
   data_train = CarReID_Proxy_Mxnet_Iter(['data'], [data_shape], ['proxy_yM', 'proxy_ZM'], [proxy_yM_shape, proxy_ZM_shape], datafn, bucket_key)
   
-  dlr = 200000/batch_size
+  dlr = 400000/batch_size
 #  dlr_steps = [dlr, dlr*2, dlr*3, dlr*4]
 
-  lr_start = (10**-1)
+  lr_start = (10**-4)
   lr_min = 10**-6
   lr_reduce = 0.9
   lr_stepnum = np.log(lr_min/lr_start)/np.log(lr_reduce)
@@ -112,7 +112,7 @@ def Do_Proxy_NCA_Train2():
 
   if True:
     reid_model.bind(for_training=True)
-    reid_model.load_checkpoint(param_prefix, 0)
+    reid_model.load_checkpoint(param_prefix, 1)
 
 
   def norm_stat(d):
@@ -132,7 +132,7 @@ def Do_Proxy_NCA_Train2():
 
   batch_end_calls = [batch_end_call, mx.callback.Speedometer(batch_size, show_period/10)]
   reid_model.fit(train_data=data_train, eval_metric=proxy_metric,
-                 begin_epoch=0, num_epoch=num_epoch, 
+                 begin_epoch=21, num_epoch=num_epoch, 
                  eval_end_callback=None,
                  batch_end_callback=batch_end_calls) 
 
@@ -149,14 +149,12 @@ def Do_Proxy_NCA_Train3():
   
   mod_context0 = [mx.gpu(7), mx.gpu(6), mx.gpu(5)]
   mod_context1 = [mx.gpu(4), mx.gpu(3), mx.gpu(2), mx.gpu(1), mx.gpu(0)]
- 
+
   devicenum = len(mod_context0) 
   proxy_devicenum = len(mod_context1) 
 
   num_epoch = 10000
   batch_size = 50*devicenum
-  show_period = 1000
-
   assert(batch_size%devicenum==0)
   bsz_per_device = batch_size / devicenum
   proxy_bsz_per_device = batch_size / proxy_devicenum
