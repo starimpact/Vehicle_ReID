@@ -147,16 +147,14 @@ def Do_Proxy_NCA_Train3():
   logger = logging.getLogger()
   logger.setLevel(logging.INFO)
   
-  mod_context0 = [mx.gpu(2), mx.gpu(3)]
-  mod_context1 = [mx.gpu(1), mx.gpu(0)]
- 
+  mod_context0 = [mx.gpu(7), mx.gpu(6), mx.gpu(5)]
+  mod_context1 = [mx.gpu(4), mx.gpu(3), mx.gpu(2), mx.gpu(1), mx.gpu(0)]
+
   devicenum = len(mod_context0) 
   proxy_devicenum = len(mod_context1) 
 
   num_epoch = 10000
-  batch_size = 27*devicenum
-  show_period = 1000
-
+  batch_size = 50*devicenum
   assert(batch_size%devicenum==0)
   bsz_per_device = batch_size / devicenum
   proxy_bsz_per_device = batch_size / proxy_devicenum
@@ -164,7 +162,7 @@ def Do_Proxy_NCA_Train3():
   bucket_key = bsz_per_device
 
   featdim = 128
-  proxy_num = 196166#548597
+  proxy_num = 196166#294255#548597
   clsnum = proxy_num
   data_shape = (batch_size, 3, 299, 299)
   proxy_yM_shape = (batch_size, proxy_num)
@@ -172,8 +170,10 @@ def Do_Proxy_NCA_Train3():
   reid_feature_shape = (batch_size, featdim)
   label_shape = dict(zip(['proxy_yM', 'proxy_ZM'], [proxy_yM_shape, proxy_ZM_shape]))
   proxyfn = 'proxy.bin'
-  datapath = '/mnt/ssd2/minzhang/ReID_origin/mingzhang/'
-  #datafn_list = ['data_each_part1.list', 'data_each_part2.list', 'data_each_part3.list', 'data_each_part4.list', 'data_each_part5.list', 'data_each_part6.list', 'data_each_part7.list'] #43928 calss number.
+  datapath = '/home/mingzhang/data/ReID_origin/mingzhang/'
+#  datapath = '/mnt/sdc1/mingzhang/ReID_origin/mingzhang/'
+ # datafn_list = ['data_each_part1.list', 'data_each_part2.list', 'data_each_part3.list', 'data_each_part4.list', 'data_each_part5.list', 'data_each_part6.list', 'data_each_part7.list'] #43928 calss number.
+ # datafn_list = ['data_each_part1.list', 'data_each_part2.list', 'data_each_part3.list', 'data_each_part4.list'] #43928 calss number.
   datafn_list = ['data_each_part1.list', 'data_each_part2.list', 'data_each_part3.list'] #43928 calss number.
   for di in xrange(len(datafn_list)):
     datafn_list[di] = datapath + datafn_list[di]
@@ -184,9 +184,9 @@ def Do_Proxy_NCA_Train3():
   dlr = 400000/batch_size
 #  dlr_steps = [dlr, dlr*2, dlr*3, dlr*4]
 
-  lr_start = 10**-2
+  lr_start = (10**-3)
   lr_min = 10**-5
-  lr_reduce = 0.9
+  lr_reduce = 0.95
   lr_stepnum = np.log(lr_min/lr_start)/np.log(lr_reduce)
   lr_stepnum = np.int(np.ceil(lr_stepnum))
   dlr_steps = [dlr*i for i in xrange(1, lr_stepnum+1)]
@@ -227,7 +227,7 @@ def Do_Proxy_NCA_Train3():
 
   if True:
     reid_model.bind(for_training=True)
-    reid_model.load_checkpoint(param_prefix, 2)
+    reid_model.load_checkpoint(param_prefix, 1)
 
   def norm_stat(d):
     return mx.nd.norm(d)/np.sqrt(d.size)
@@ -246,8 +246,8 @@ def Do_Proxy_NCA_Train3():
 
   batch_end_calls = [batch_end_call, mx.callback.Speedometer(batch_size, show_period/10)]
   reid_model.fit(train_data=data_train, eval_metric=proxy_metric,
-                 begin_epoch=0, num_epoch=num_epoch, 
-                 eval_end_callback=None,
+                 begin_epoch=10, num_epoch=num_epoch, 
+                 eval_end_callback=None, kvstore=None,
                  batch_end_callback=batch_end_calls) 
 
 
