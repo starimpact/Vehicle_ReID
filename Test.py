@@ -46,7 +46,7 @@ def Do_Feature_Test(restore, ctx=mx.cpu()):
 
   fdir = '/home/mingzhang/data/car_ReID_for_zhangming/test_train'
   fdir = '/home/mingzhang/data/car_ReID_for_zhangming/test'
-  fdir = '/mnt/ssd2/minzhang/Re-ID_select'
+#  fdir = '/mnt/ssd2/minzhang/Re-ID_select'
 
   # set up logger
   logger = logging.getLogger()
@@ -88,7 +88,7 @@ def Do_Compare_Test(restore, ctx=mx.cpu()):
 
   fdir = '/home/mingzhang/data/car_ReID_for_zhangming/test_train'
   fdir = '/home/mingzhang/data/car_ReID_for_zhangming/test'
-  fdir = '/mnt/ssd2/minzhang/Re-ID_select'
+#  fdir = '/mnt/ssd2/minzhang/Re-ID_select'
 
   # set up logger
   logger = logging.getLogger()
@@ -157,7 +157,7 @@ def Do_Softmax_Test_Acc(ctx, resotre_whichone):
 
 if __name__=='__main__':
 #  Do_Test()
-  restore_whichone = 14
+  restore_whichone = 15
   ctx = mx.gpu(0)
 #  Do_Softmax_Test_Acc(ctx, restore_whichone)
   Do_Feature_Test(restore_whichone, ctx)

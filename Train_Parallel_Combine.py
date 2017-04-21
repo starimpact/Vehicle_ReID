@@ -155,6 +155,8 @@ def Do_Proxy_NCA_Train3():
 
   num_epoch = 10000
   batch_size = 50*devicenum
+  show_period = 1000
+
   assert(batch_size%devicenum==0)
   bsz_per_device = batch_size / devicenum
   proxy_bsz_per_device = batch_size / proxy_devicenum
@@ -259,7 +261,7 @@ def Do_Proxy_NCA_Train3():
 if __name__=='__main__':
 #  Do_Train()
 #  Do_Proxy_NCA_Train()
-  Do_Proxy_NCA_Train2()
-#  Do_Proxy_NCA_Train3()
+#  Do_Proxy_NCA_Train2()
+  Do_Proxy_NCA_Train3()
 
 
