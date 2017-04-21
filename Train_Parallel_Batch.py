@@ -356,7 +356,7 @@ def Do_Proxy_NCA_Train3():
 if __name__=='__main__':
 #  Do_Train()
 #  Do_Proxy_NCA_Train()
-  Do_Proxy_NCA_Train2()
-#  Do_Proxy_NCA_Train3()
+#  Do_Proxy_NCA_Train2()
+  Do_Proxy_NCA_Train3()
 
 
