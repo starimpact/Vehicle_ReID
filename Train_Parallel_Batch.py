@@ -272,7 +272,7 @@ def Do_Proxy_NCA_Train3():
 
   for di in xrange(len(datafn_list)):
     datafn_list[di] = datapath + datafn_list[di]
-  data_train = CarReID_Proxy_Batch_Mxnet_Iter2(['data'], [data_shape], ['proxy_yM', 'proxy_ZM'], [proxy_yM_shape, proxy_ZM_shape], datafn_list, total_proxy_num, featdim, proxy_batch, 1)
+  data_train = CarReID_Proxy_Batch_Mxnet_Iter2(['data'], [data_shape], ['proxy_yM', 'proxy_ZM'], [proxy_yM_shape, proxy_ZM_shape], datafn_list, total_proxy_num, featdim, proxy_batch, 4)
   
   dlr = 800000/batch_size
 #  dlr_steps = [dlr, dlr*2, dlr*3, dlr*4]
