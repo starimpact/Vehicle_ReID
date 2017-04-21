@@ -83,15 +83,10 @@ def do_batch_end_call(reid_model, param_prefix, \
     eval_metric = args[0].eval_metric
     data_batch = args[0].locals['data_batch']  
     train_data = args[0].locals['train_data']  
-    #expand the hard examples set
-#    print 'batch_hardidxes:', batch_hardidxes
-#    for hi,loss in enumerate(batch_hardidxes):
-#      hexp = train_data.batch_infos[hi]
-#      if not train_data.all_hardexps.has_key(hexp):
-#        train_data.all_hardexps[hexp] = loss
-#      else:
-#        train_data.all_hardexps[hexp] += loss
-#    batch_hardidxes[:] = []
+
+    if nbatch%8==0:
+      arg_params, aux_params = reid_model.get_params()
+      reid_model.set_params(arg_params, aux_params)
 
     if nbatch%show_period==0:
        save_checkpoint(reid_model, param_prefix, epoch%4)
@@ -276,12 +271,12 @@ def Do_Proxy_NCA_Train3():
 
   for di in xrange(len(datafn_list)):
     datafn_list[di] = datapath + datafn_list[di]
-  data_train = CarReID_Proxy_Batch_Mxnet_Iter2(['data'], [data_shape], ['proxy_yM', 'proxy_ZM'], [proxy_yM_shape, proxy_ZM_shape], datafn_list, total_proxy_num, featdim, proxy_batch, 8)
+  data_train = CarReID_Proxy_Batch_Mxnet_Iter2(['data'], [data_shape], ['proxy_yM', 'proxy_ZM'], [proxy_yM_shape, proxy_ZM_shape], datafn_list, total_proxy_num, featdim, proxy_batch, 1)
   
-  dlr = 200000/batch_size
+  dlr = 800000/batch_size
 #  dlr_steps = [dlr, dlr*2, dlr*3, dlr*4]
 
-  lr_start = (10**-1)
+  lr_start = (10**-1)*0.5
   lr_min = 10**-5
   lr_reduce = 0.95
   lr_stepnum = np.log(lr_min/lr_start)/np.log(lr_reduce)
@@ -291,7 +286,7 @@ def Do_Proxy_NCA_Train3():
   print dlr_steps
   lr_scheduler = mx.lr_scheduler.MultiFactorScheduler(dlr_steps, lr_reduce)
   param_prefix = 'MDL_PARAM/params2_proxy_nca/car_reid'
-  load_paramidx = None
+  load_paramidx = 3
 
   reid_net = proxy_nca_model.CreateModel_Color2(None, bsz_per_device, proxy_num, data_shape[2:])
 
