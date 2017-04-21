@@ -331,7 +331,8 @@ class CarReID_Proxy_Mxnet_Iter(mx.io.DataIter):
 
 
 class CarReID_Proxy_Batch_Mxnet_Iter(mx.io.DataIter):
-  def __init__(self, data_names, data_shapes, label_names, label_shapes, datafn, proxy_num, featdim, proxy_batchsize, num_proxy_batch_max=0.0):
+  def __init__(self, data_names, data_shapes, label_names, label_shapes, datafn, 
+               proxy_num, featdim, proxy_batchsize, repeat_times=4, num_proxy_batch_max=0.0):
     super(CarReID_Proxy_Batch_Mxnet_Iter, self).__init__()
 
     self.batch_size = data_shapes[0][0]
@@ -370,6 +371,8 @@ class CarReID_Proxy_Batch_Mxnet_Iter(mx.io.DataIter):
     self.proxy_Z_p = proxy_Z_ptmp.astype(np.float32)
     self.proxy_Z_map = np.zeros(self.proxy_batchsize, dtype=np.int32)-1
     self.caridnum = None
+    self.total_proxy_batch_epoch = 0
+    self.repeat_times = repeat_times
     self.do_reset()
 
   def __iter__(self):
@@ -399,7 +402,7 @@ class CarReID_Proxy_Batch_Mxnet_Iter(mx.io.DataIter):
     self.cur_batch = 0        
     self.batch_carids = []
     self.batch_infos = []
-    if self.cur_proxy_batch == 0 \
+    if self.total_proxy_batch_epoch == 0 \
        or self.cur_proxy_batch == self.num_proxy_batch \
        or (self.num_proxy_batch_max > 0.0 \
        and self.cur_proxy_batch > self.num_proxy_batch * self.num_proxy_batch_max):
@@ -432,7 +435,8 @@ class CarReID_Proxy_Batch_Mxnet_Iter(mx.io.DataIter):
          self.caridnum, self.proxy_batchsize, self.datalen, self.cur_proxy_batch+1,\
          self.num_proxy_batch, self.big_epoch)
 
-    self.cur_proxy_batch += 1
+    if self.total_proxy_batch_epoch%self.repeat_times==0: 
+      self.cur_proxy_batch += 1
 #    print self.proxy_Z_p, self.proxy_Z_p.sum()
     return self.caridnum, self.proxy_Z_p
 
@@ -513,7 +517,8 @@ class CarReID_Proxy_Mxnet_Iter2(mx.io.DataIter):
 
 
 class CarReID_Proxy_Batch_Mxnet_Iter2(mx.io.DataIter):
-  def __init__(self, data_names, data_shapes, label_names, label_shapes, datafn, proxy_num, featdim, proxy_batchsize, num_proxy_batch_max=0.0):
+  def __init__(self, data_names, data_shapes, label_names, label_shapes, datafn, 
+               proxy_num, featdim, proxy_batchsize, repeat_times=4, num_proxy_batch_max=0.0):
     super(CarReID_Proxy_Batch_Mxnet_Iter2, self).__init__()
 
     self.batch_size = data_shapes[0][0]
@@ -552,6 +557,8 @@ class CarReID_Proxy_Batch_Mxnet_Iter2(mx.io.DataIter):
     self.proxy_Z_p = proxy_Z_ptmp.astype(np.float32)
     self.proxy_Z_map = np.zeros(self.proxy_batchsize, dtype=np.int32)-1
     self.caridnum = None
+    self.total_proxy_batch_epoch = 0
+    self.repeat_times = repeat_times
     self.do_reset()
 
   def __iter__(self):
@@ -581,7 +588,7 @@ class CarReID_Proxy_Batch_Mxnet_Iter2(mx.io.DataIter):
     self.cur_batch = 0        
     self.batch_carids = []
     self.batch_infos = []
-    if self.cur_proxy_batch == 0 \
+    if self.total_proxy_batch_epoch == 0 \
        or self.cur_proxy_batch == self.num_proxy_batch \
        or (self.num_proxy_batch_max > 0.0 \
        and self.cur_proxy_batch > self.num_proxy_batch * self.num_proxy_batch_max):
@@ -614,7 +621,9 @@ class CarReID_Proxy_Batch_Mxnet_Iter2(mx.io.DataIter):
          self.caridnum, self.proxy_batchsize, self.datalen, self.cur_proxy_batch+1,\
          self.num_proxy_batch, self.big_epoch)
 
-    self.cur_proxy_batch += 1
+    self.total_proxy_batch_epoch += 1
+    if self.total_proxy_batch_epoch%self.repeat_times==0:
+      self.cur_proxy_batch += 1
 #    print self.proxy_Z_p, self.proxy_Z_p.sum()
     return self.caridnum, self.proxy_Z_p
 
