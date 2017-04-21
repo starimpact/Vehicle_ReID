@@ -435,6 +435,7 @@ class CarReID_Proxy_Batch_Mxnet_Iter(mx.io.DataIter):
          self.caridnum, self.proxy_batchsize, self.datalen, self.cur_proxy_batch+1,\
          self.num_proxy_batch, self.big_epoch)
 
+    self.total_proxy_batch_epoch += 1
     if self.total_proxy_batch_epoch%self.repeat_times==0: 
       self.cur_proxy_batch += 1
 #    print self.proxy_Z_p, self.proxy_Z_p.sum()
