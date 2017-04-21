@@ -144,7 +144,7 @@ def Do_Proxy_NCA_Train2():
 
   featdim = 128
   total_proxy_num = 43928
-  proxy_batch = 40000#720000
+  proxy_batch = 20000#720000
   proxy_num = proxy_batch#43928#proxy_batch
   clsnum = proxy_num
   data_shape = (batch_size, 3, 299, 299)
@@ -161,7 +161,7 @@ def Do_Proxy_NCA_Train2():
   dlr = 200000/batch_size
 #  dlr_steps = [dlr, dlr*2, dlr*3, dlr*4]
 
-  lr_start = (10**-2)
+  lr_start = (10**-1)
   lr_min = 10**-5
   lr_reduce = 0.95
   lr_stepnum = np.log(lr_min/lr_start)/np.log(lr_reduce)
@@ -171,7 +171,7 @@ def Do_Proxy_NCA_Train2():
   print dlr_steps
   lr_scheduler = mx.lr_scheduler.MultiFactorScheduler(dlr_steps, lr_reduce)
   param_prefix = 'MDL_PARAM/params2_proxy_nca/car_reid'
-  load_paramidx = 15
+  load_paramidx = None 
 
   reid_net = proxy_nca_model.CreateModel_Color2(None, bsz_per_device, proxy_num, data_shape[2:])
 
