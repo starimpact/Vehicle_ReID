@@ -331,15 +331,19 @@ class CarReID_Proxy_Mxnet_Iter(mx.io.DataIter):
 
 
 class CarReID_Proxy_Batch_Mxnet_Iter(mx.io.DataIter):
-  def __init__(self, data_names, data_shapes, label_names, \
-               label_shapes, datafn, proxy_batchsize, num_proxy_batch_max=0.0):
+  def __init__(self, data_names, data_shapes, label_names, label_shapes, datafn, proxy_num, featdim, proxy_batchsize, num_proxy_batch_max=0.0):
     super(CarReID_Proxy_Batch_Mxnet_Iter, self).__init__()
 
     self.batch_size = data_shapes[0][0]
     self._provide_data = zip(data_names, data_shapes)
     self._provide_label = zip(label_names, label_shapes)
+    self.datas_batch = {} 
+    self.datas_batch['data'] = mx.nd.zeros(data_shapes[0], dtype=np.float32)
+    self.datas_batch['databuffer'] = np.zeros(data_shapes[0], dtype=np.float32)
+    self.labels_batch = {}
+    self.labels_batch['proxy_yM'] = mx.nd.zeros(label_shapes[0], dtype=np.float32)
+    self.labels_batch['proxy_ZM'] = mx.nd.zeros(label_shapes[1], dtype=np.float32)
     self.cur_batch = 0
-#    self.datas_labels = self.data_label_gen(self._provide_data, self._provide_label) 
     self.datalist = dg.get_datalist(datafn)
     self.datalen = len(self.datalist)
     self.labeldict = dict(self._provide_label)
@@ -348,11 +352,24 @@ class CarReID_Proxy_Batch_Mxnet_Iter(mx.io.DataIter):
     self.num_batches = self.proxy_batchsize / label_shapes[0][0]
     self.batch_carids = []
     self.batch_infos = []
-    self.all_hardexps = {}
     self.num_proxy_batch = self.datalen / self.proxy_batchsize
     self.num_proxy_batch_max = num_proxy_batch_max
     self.cur_proxy_batch = 0
     self.big_epoch = 0
+    self.proxy_num = proxy_num
+    self.featdim = featdim
+    self.proxy_Z_fn = './proxy_Z.params'
+    proxy_Ztmp = np.random.rand(self.proxy_num, self.featdim)-0.5
+    self.proxy_Z = proxy_Ztmp.astype(np.float32) 
+    if os.path.exists(self.proxy_Z_fn):
+      tmpZ = mx.nd.load(self.proxy_Z_fn)
+      self.proxy_Z = tmpZ[0].asnumpy()
+      assert(self.proxy_num==tmpZ[0].shape[0])
+      print 'load proxy_Z from', self.proxy_Z_fn
+    proxy_Z_ptmp = np.random.rand(self.proxy_batchsize, self.featdim)-0.5
+    self.proxy_Z_p = proxy_Z_ptmp.astype(np.float32)
+    self.proxy_Z_map = np.zeros(self.proxy_batchsize, dtype=np.int32)-1
+    self.caridnum = None
     self.do_reset()
 
   def __iter__(self):
@@ -362,6 +379,20 @@ class CarReID_Proxy_Batch_Mxnet_Iter(mx.io.DataIter):
     self.cur_batch = 0        
     self.batch_carids = []
     self.batch_infos = []
+    pass
+
+  def proxy_updateset(self, proxy_Z_p_new):
+    num = np.sum(self.proxy_Z_map>-1)
+    p_Z = proxy_Z_p_new.asnumpy()
+    self.proxy_Z_p[:] = p_Z
+    for i in xrange(num):
+      carid = self.proxy_Z_map[i]
+      self.proxy_Z[carid] = p_Z[i]
+    savename = self.proxy_Z_fn 
+    mx.nd.save(savename, [mx.nd.array(self.proxy_Z)])
+#    a = self.proxy_Z
+#    a = p_Z
+    print 'save proxy_Z into file', savename#, a#, a[a<0], a[a>0]
     pass
 
   def do_reset(self):
@@ -375,20 +406,10 @@ class CarReID_Proxy_Batch_Mxnet_Iter(mx.io.DataIter):
       self.cur_proxy_batch = 0 
       self.big_epoch += 1
       self.rndidx_list = np.random.permutation(self.datalen)
-  
-    print 'getting another proxy batch to train(%d/%d, %d/%d) [big_epoch=%d] hard_exmaple=%d...'%(\
-         self.proxy_batchsize, self.datalen, self.cur_proxy_batch+1,\
-         self.num_proxy_batch, self.big_epoch, len(self.all_hardexps))
 
-    hardexplist = sorted(self.all_hardexps.items(), key=operator.itemgetter(1), reverse=True)
-    hardexplist = hardexplist[:self.proxy_batchsize]
-    self.all_hardexps = dict(hardexplist)
-    hardnum = len(self.all_hardexps)
-    if hardnum>0: print hardexplist[0], hardexplist[hardnum/2], hardexplist[-1] 
-    hardrndidx = np.random.permutation(hardnum)
-    nowhardidx = 0
     self.proxy_datalist = []
     carids = {}
+    self.proxy_Z_map[:] = -1
     for i in xrange(self.proxy_batchsize):
       pxyi = self.cur_proxy_batch * self.proxy_batchsize + i
       idx = self.rndidx_list[pxyi]
@@ -396,24 +417,24 @@ class CarReID_Proxy_Batch_Mxnet_Iter(mx.io.DataIter):
       parts = onedata.split(',')
       path = parts[0]
       son = parts[1]
-      carid = parts[0].split('/')[-1]
-      if nowhardidx < hardnum and np.random.rand() < 0.5:
-        nhid = nowhardidx# hardrndidx[nowhardidx]
-        oneitem = hardexplist[nhid][0]
-        parts = oneitem.split(',')
-        path = parts[0]
-        son = parts[1]
-        carid = parts[0].split('/')[-1]
-        nowhardidx += 1
+      carid = path.split('/')[-1]
       if not carids.has_key(carid):
         carids[carid] = len(carids)
+      ori_id = int(carid)
       proxyid = carids[carid] 
+      self.proxy_Z_p[proxyid] = self.proxy_Z[ori_id]
+      self.proxy_Z_map[proxyid] = ori_id
       proxy_str = '%s,%s,%s,%s'%(path, son, carid, str(proxyid))
       self.proxy_datalist.append(proxy_str)
 
-    print 'randomly selected %d hard examples...'%nowhardidx
+    self.caridnum = len(carids)
+    print 'got another proxy batch to train(%d/%d/%d, %d/%d) [big_epoch=%d]...'%(\
+         self.caridnum, self.proxy_batchsize, self.datalen, self.cur_proxy_batch+1,\
+         self.num_proxy_batch, self.big_epoch)
+
     self.cur_proxy_batch += 1
-    return len(carids)
+#    print self.proxy_Z_p, self.proxy_Z_p.sum()
+    return self.caridnum, self.proxy_Z_p
 
   def __next__(self):
     return self.next()
@@ -429,7 +450,8 @@ class CarReID_Proxy_Batch_Mxnet_Iter(mx.io.DataIter):
 
   def next(self):
     if self.cur_batch < self.num_batches:
-      datas, labels, carids, infos = dg.get_data_label_proxy_batch_mxnet(self._provide_data, self._provide_label, self.proxy_datalist, self.cur_batch) 
+#      datas, labels, carids, infos = dg.get_data_label_proxy_batch_mxnet(self._provide_data, self._provide_label, self.proxy_datalist, self.cur_batch) 
+      datas, labels, carids, infos = dg.get_data_label_proxy_batch_mxnet_threads(self._provide_data, self.datas_batch, self._provide_label, self.labels_batch, self.proxy_datalist, self.cur_batch, self.caridnum) 
       self.batch_carids = carids
       self.batch_infos = infos
       self.cur_batch += 1
@@ -566,8 +588,6 @@ class CarReID_Proxy_Batch_Mxnet_Iter2(mx.io.DataIter):
       self.cur_proxy_batch = 0 
       self.big_epoch += 1
       self.rndidx_list = np.random.permutation(self.datalen)
-  
-
 
     self.proxy_datalist = []
     carids = {}
