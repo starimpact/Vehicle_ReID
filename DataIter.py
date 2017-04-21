@@ -413,8 +413,10 @@ class CarReID_Proxy_Batch_Mxnet_Iter(mx.io.DataIter):
     self.proxy_datalist = []
     carids = {}
     self.proxy_Z_map[:] = -1
+    prndidxs = np.random.permutation(self.proxy_batchsize)
     for i in xrange(self.proxy_batchsize):
-      pxyi = self.cur_proxy_batch * self.proxy_batchsize + i
+      pidx = prndidxs[i]
+      pxyi = self.cur_proxy_batch * self.proxy_batchsize + pidx
       idx = self.rndidx_list[pxyi]
       onedata = self.datalist[idx] 
       parts = onedata.split(',')
@@ -435,6 +437,7 @@ class CarReID_Proxy_Batch_Mxnet_Iter(mx.io.DataIter):
          self.caridnum, self.proxy_batchsize, self.datalen, self.cur_proxy_batch+1,\
          self.num_proxy_batch, self.big_epoch)
 
+    self.total_proxy_batch_epoch += 1
     if self.total_proxy_batch_epoch%self.repeat_times==0: 
       self.cur_proxy_batch += 1
 #    print self.proxy_Z_p, self.proxy_Z_p.sum()
@@ -599,8 +602,10 @@ class CarReID_Proxy_Batch_Mxnet_Iter2(mx.io.DataIter):
     self.proxy_datalist = []
     carids = {}
     self.proxy_Z_map[:] = -1
+    prndidxs = np.random.permutation(self.proxy_batchsize)
     for i in xrange(self.proxy_batchsize):
-      pxyi = self.cur_proxy_batch * self.proxy_batchsize + i
+      pidx = prndidxs[i]
+      pxyi = self.cur_proxy_batch * self.proxy_batchsize + pidx
       idx = self.rndidx_list[pxyi]
       onedata = self.datalist[idx] 
       parts = onedata.split(',')
