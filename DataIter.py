@@ -524,6 +524,7 @@ class CarReID_Proxy_Batch_Mxnet_Iter2(mx.io.DataIter):
     self.proxy_Z_p = proxy_Z_ptmp.astype(np.float32)
     self.proxy_Z_map = np.zeros(self.proxy_batchsize, dtype=np.int32)-1
     self.caridnum = None
+    self.total_proxy_batch_epoch = 0
     self.do_reset()
 
   def __iter__(self):
@@ -553,15 +554,13 @@ class CarReID_Proxy_Batch_Mxnet_Iter2(mx.io.DataIter):
     self.cur_batch = 0        
     self.batch_carids = []
     self.batch_infos = []
-    if self.cur_proxy_batch == 0 \
+    if self.total_proxy_batch_epoch == 0 \
        or self.cur_proxy_batch == self.num_proxy_batch \
        or (self.num_proxy_batch_max > 0.0 \
        and self.cur_proxy_batch > self.num_proxy_batch * self.num_proxy_batch_max):
       self.cur_proxy_batch = 0 
       self.big_epoch += 1
       self.rndidx_list = np.random.permutation(self.datalen)
-  
-
 
     self.proxy_datalist = []
     carids = {}
@@ -588,7 +587,9 @@ class CarReID_Proxy_Batch_Mxnet_Iter2(mx.io.DataIter):
          self.caridnum, self.proxy_batchsize, self.datalen, self.cur_proxy_batch+1,\
          self.num_proxy_batch, self.big_epoch)
 
-    self.cur_proxy_batch += 1
+    self.total_proxy_batch_epoch += 1
+    if self.total_proxy_batch_epoch%4==0:
+      self.cur_proxy_batch += 1
 #    print self.proxy_Z_p, self.proxy_Z_p.sum()
     return self.caridnum, self.proxy_Z_p
 
