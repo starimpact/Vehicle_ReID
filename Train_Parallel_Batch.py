@@ -83,7 +83,8 @@ def do_batch_end_call(reid_model, param_prefix, \
     eval_metric = args[0].eval_metric
     data_batch = args[0].locals['data_batch']  
     train_data = args[0].locals['train_data']  
-
+    
+    #synchronize parameters in small period.
     if nbatch%8==0:
       arg_params, aux_params = reid_model.get_params()
       reid_model.set_params(arg_params, aux_params)
