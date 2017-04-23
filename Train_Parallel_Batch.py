@@ -83,6 +83,11 @@ def do_batch_end_call(reid_model, param_prefix, \
     eval_metric = args[0].eval_metric
     data_batch = args[0].locals['data_batch']  
     train_data = args[0].locals['train_data']  
+
+    #synchronize parameters in small period.
+    if nbatch%8==0:
+      arg_params, aux_params = reid_model.get_params()
+      reid_model.set_params(arg_params, aux_params)
     #expand the hard examples set
 #    print 'batch_hardidxes:', batch_hardidxes
 #    for hi,loss in enumerate(batch_hardidxes):
@@ -238,8 +243,8 @@ def Do_Proxy_NCA_Train3():
   logger.setLevel(logging.INFO)
   
 
-#  ctxs = [mx.gpu(0), mx.gpu(1), mx.gpu(2), mx.gpu(3), mx.gpu(4), mx.gpu(5), mx.gpu(6), mx.gpu(7)]
-  ctxs = [mx.gpu(0), mx.gpu(1), mx.gpu(2), mx.gpu(3)]
+  ctxs = [mx.gpu(0), mx.gpu(1), mx.gpu(2), mx.gpu(3), mx.gpu(4), mx.gpu(5), mx.gpu(6), mx.gpu(7)]
+#  ctxs = [mx.gpu(0), mx.gpu(1), mx.gpu(2), mx.gpu(3)]
 #  ctxs = [mx.gpu(2), mx.gpu(1), mx.gpu(3)]
 #  ctxs = [mx.gpu(0), mx.gpu(1)]
 #  ctxs = [mx.gpu(0)]
@@ -256,7 +261,7 @@ def Do_Proxy_NCA_Train3():
   bucket_key = bsz_per_device
 
   featdim = 128
-  total_proxy_num = 196166#406448#548597
+  total_proxy_num = 142149#406448#548597
   proxy_batch = 40000
   proxy_num = proxy_batch
   clsnum = proxy_num
@@ -267,18 +272,20 @@ def Do_Proxy_NCA_Train3():
   label_shape = dict(zip(['proxy_yM', 'proxy_ZM'], [proxy_yM_shape, proxy_ZM_shape]))
   proxyfn = 'proxy.bin'
 #  datapath = '/home/mingzhang/data/ReID_origin/mingzhang/'
-  datapath = '/mnt/ssd2/minzhang/ReID_origin/mingzhang/'
+  datapath = '/home/mingzhang/data/ReID_origin/mingzhang2/'
+#  datapath = '/mnt/ssd2/minzhang/ReID_origin/mingzhang/'
 
 #  datafn_list = ['data_each_part1.list', 'data_each_part2.list', 'data_each_part3.list', 'data_each_part4.list', 'data_each_part5.list', 'data_each_part6.list', 'data_each_part7.list'] #43928 calss number.
 #  datafn_list = ['data_each_part1.list', 'data_each_part2.list', 'data_each_part3.list', 'data_each_part4.list', 'data_each_part5.list'] #406448 calss number.
-  datafn_list = ['data_each_part1.list', 'data_each_part2.list', 'data_each_part3.list'] #196166 calss number.
+#  datafn_list = ['data_each_part1.list', 'data_each_part2.list', 'data_each_part3.list'] #196166 calss number.
+  datafn_list = ['data_each_part6.list', 'data_each_part7.list'] #142149 calss number.
 #  datafn_list = ['data_each_part1.list'] #43912 calss number.
 
   for di in xrange(len(datafn_list)):
     datafn_list[di] = datapath + datafn_list[di]
-  data_train = CarReID_Proxy_Batch_Mxnet_Iter2(['data'], [data_shape], ['proxy_yM', 'proxy_ZM'], [proxy_yM_shape, proxy_ZM_shape], datafn_list, total_proxy_num, featdim, proxy_batch, 8)
+  data_train = CarReID_Proxy_Batch_Mxnet_Iter2(['data'], [data_shape], ['proxy_yM', 'proxy_ZM'], [proxy_yM_shape, proxy_ZM_shape], datafn_list, total_proxy_num, featdim, proxy_batch, 1)
   
-  dlr = 200000/batch_size
+  dlr = 800000/batch_size
 #  dlr_steps = [dlr, dlr*2, dlr*3, dlr*4]
 
   lr_start = (10**-1)
