@@ -128,8 +128,8 @@ void do_augment_onethread(void *p)
  
 //  printf("%s\n", strfn.c_str()); 
   //mask rows
-  int rnd0 = rand();
-  if (rnd0 < (RAND_MAX / 4) * 3)
+//  int rnd0 = rand();
+//  if (rnd0 < (RAND_MAX / 4) * 3)
   {
     rnd_mask(img);
   }
