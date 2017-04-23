@@ -129,7 +129,7 @@ void do_augment_onethread(void *p)
 //  printf("%s\n", strfn.c_str()); 
   //mask rows
   int rnd0 = rand();
-  if (rnd0 < RAND_MAX / 2)
+  if (rnd0 < (RAND_MAX / 4) * 3)
   {
     rnd_mask(img);
   }
@@ -242,8 +242,12 @@ int rnd_mask(cv::Mat &matIn)
   int dwH = matIn.rows;
   int dwW = matIn.cols;
   
-  int rndH = (int)randMToN(dwH/16, dwH/4);
-  int rndRI = (int)randMToN(0, dwH/4-1);
+  int rndH = (int)randMToN(dwH/8, dwH/4);
+  int rndRI = (int)randMToN(0, dwH-1);
+  if (rndH + rndRI >= dwH)
+  {
+    rndRI = dwH - rndH - 1;
+  }
   
   memset(matIn.data + rndRI * dwW * 3, 0, rndH * dwW * 3);
 
