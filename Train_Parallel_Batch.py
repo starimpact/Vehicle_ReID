@@ -64,6 +64,7 @@ class Proxy_Metric(metric.EvalMetric):
     eachloss = preds[0].asnumpy()
     loss = eachloss.mean()
     self.sum_metric[0] += loss
+#    print loss, len(preds)#, labels
 #    self.sum_metric[1] += np.sum(eachloss<=0.0)
 #    self.sum_metric[2] += np.sum(eachloss>0.0)
 #    if loss < 0: self.batch_hardidxes[:] = eachloss
@@ -252,7 +253,7 @@ def Do_Proxy_NCA_Train3():
   bucket_key = bsz_per_device
 
   featdim = 128
-  total_proxy_num = 196166#406448#548597
+  total_proxy_num = 142149#196166#406448#548597
   proxy_batch = 40000
   proxy_num = proxy_batch
   clsnum = proxy_num
@@ -263,21 +264,23 @@ def Do_Proxy_NCA_Train3():
   label_shape = dict(zip(['proxy_yM', 'proxy_ZM'], [proxy_yM_shape, proxy_ZM_shape]))
   proxyfn = 'proxy.bin'
 #  datapath = '/home/mingzhang/data/ReID_origin/mingzhang/'
-  datapath = '/mnt/ssd2/minzhang/ReID_origin/mingzhang/'
+#  datapath = '/mnt/ssd2/minzhang/ReID_origin/mingzhang/'
+  datapath = '/mnt/ssd2/minzhang/ReID_origin/mingzhang2/'
 
 #  datafn_list = ['data_each_part1.list', 'data_each_part2.list', 'data_each_part3.list', 'data_each_part4.list', 'data_each_part5.list', 'data_each_part6.list', 'data_each_part7.list'] #43928 calss number.
 #  datafn_list = ['data_each_part1.list', 'data_each_part2.list', 'data_each_part3.list', 'data_each_part4.list', 'data_each_part5.list'] #406448 calss number.
-  datafn_list = ['data_each_part1.list', 'data_each_part2.list', 'data_each_part3.list'] #196166 calss number.
+#  datafn_list = ['data_each_part1.list', 'data_each_part2.list', 'data_each_part3.list'] #196166 calss number.
+  datafn_list = ['data_each_part6.list', 'data_each_part7.list'] #142149 calss number.
 #  datafn_list = ['data_each_part1.list'] #43912 calss number.
 
   for di in xrange(len(datafn_list)):
     datafn_list[di] = datapath + datafn_list[di]
-  data_train = CarReID_Proxy_Batch_Mxnet_Iter2(['data'], [data_shape], ['proxy_yM', 'proxy_ZM'], [proxy_yM_shape, proxy_ZM_shape], datafn_list, total_proxy_num, featdim, proxy_batch, 4)
+  data_train = CarReID_Proxy_Batch_Mxnet_Iter2(['data'], [data_shape], ['proxy_yM', 'proxy_ZM'], [proxy_yM_shape, proxy_ZM_shape], datafn_list, total_proxy_num, featdim, proxy_batch, 1)
   
   dlr = 800000/batch_size
 #  dlr_steps = [dlr, dlr*2, dlr*3, dlr*4]
 
-  lr_start = (10**-1)*0.5
+  lr_start = (10**-2)
   lr_min = 10**-5
   lr_reduce = 0.95
   lr_stepnum = np.log(lr_min/lr_start)/np.log(lr_reduce)
@@ -328,7 +331,11 @@ def Do_Proxy_NCA_Train3():
     reid_model.bind(data_shapes=data_train.provide_data, 
                     label_shapes=data_train.provide_label)
     arg_params, aux_params = load_checkpoint(reid_model, param_prefix, load_paramidx)
-    epoch_end_call(None, None, arg_params, aux_params)
+    do_epoch_end_call(param_prefix, None, reid_model, \
+                      arg_params, aux_params, \
+                      None, data_train, \
+                      proxy_num, proxy_batch)
+#    epoch_end_call(None, None, arg_params, aux_params)
 
 
   batch_end_calls = [batch_end_call, mx.callback.Speedometer(batch_size, show_period/10)]

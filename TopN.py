@@ -49,7 +49,8 @@ def get_all_top(folder, descend=True):
 
 
 def get_rightrate(qcar_list):
-  topnum_list = [1, 5, 10, 15, 20]
+  topnum_list = [1, 2, 3, 4, 5, 10, 15, 20]
+  print 'TopN:', topnum_list
   topsize = len(topnum_list)
   toprate_num = np.zeros(topsize) 
   for qcar in qcar_list:
