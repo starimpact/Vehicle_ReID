@@ -4,7 +4,7 @@ import mxnet as mx
 from mxnet import metric
 
 from DataIter import CarReID_Proxy_Batch_Mxnet_Iter
-from DataIter import CarReID_Proxy_Batch_Mxnet_Iter2
+from DataIter import CarReID_Proxy_Batch_Plate_Mxnet_Iter2
 from Solver import CarReID_Solver, CarReID_Softmax_Solver, CarReID_Proxy_Solver
 from MDL_PARAM import model2 as now_model
 from MDL_PARAM import model2_proxy_nca as proxy_nca_model
@@ -267,16 +267,11 @@ def Do_Proxy_NCA_Train3():
   datapath = '/mnt/ssd2/minzhang/ReID_origin/mingzhang/'
 #  datapath = '/mnt/ssd2/minzhang/ReID_origin/mingzhang2/'
 
-#  datafn_list = ['data_each_part1.list', 'data_each_part2.list', 'data_each_part3.list', 'data_each_part4.list', 'data_each_part5.list', 'data_each_part6.list', 'data_each_part7.list'] #43928 calss number.
-#  datafn_list = ['data_each_part1.list', 'data_each_part2.list', 'data_each_part3.list', 'data_each_part4.list', 'data_each_part5.list'] #406448 calss number.
-#  datafn_list = ['data_each_part1.list', 'data_each_part2.list', 'data_each_part3.list'] #196166 calss number.
-#  datafn_list = ['data_each_part6.list', 'data_each_part7.list'] #142149 calss number.
-  datafn_list = ['front_image_list_train.list', 'back_image_list_train.list'] #220160 calss number.
-#  datafn_list = ['data_each_part1.list'] #43912 calss number.
+  datafn_list = ['front_plate_image_list_train.list', 'back_plate_image_list_train.list'] #220160 calss number.
 
   for di in xrange(len(datafn_list)):
     datafn_list[di] = datapath + datafn_list[di]
-  data_train = CarReID_Proxy_Batch_Mxnet_Iter2(['data'], [data_shape], ['proxy_yM', 'proxy_ZM'], [proxy_yM_shape, proxy_ZM_shape], datafn_list, total_proxy_num, featdim, proxy_batch, 1)
+  data_train = CarReID_Proxy_Batch_Plate_Mxnet_Iter2(['data'], [data_shape], ['proxy_yM', 'proxy_ZM'], [proxy_yM_shape, proxy_ZM_shape], datafn_list, total_proxy_num, featdim, proxy_batch, 1)
   
   dlr = 800000/batch_size
 #  dlr_steps = [dlr, dlr*2, dlr*3, dlr*4]
