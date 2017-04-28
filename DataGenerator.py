@@ -576,6 +576,26 @@ def aug_threads_c2(paths, tmpshape, imgsout):
 #    cv2.waitKey(0)
 
 
+def  aug_plate_threads_c(paths, tmpplates, tmpshape, imgsout):
+  imgnum, chs, stdH, stdW = tmpshape 
+  plates = np.asarray(tmpplates)
+  strs = (c_char_p*imgnum)()
+  strs[:] = paths
+#  t0 = time.time()
+  func_c.do_augment_plate_threads(strs, plates.ctypes.data_as(POINTER(c_int)), 
+                 imgnum, stdH, stdW, imgsout.ctypes.data_as(POINTER(c_float)))
+#  t1 = time.time()
+#  print t1-t0
+#  for i in xrange(imgnum):
+#    print i, plates[i]
+#    img = imgsout[i]
+#    img = img.swapaxes(0, 1)
+#    img = img.swapaxes(1, 2)
+#    cv2.imshow('hi', img)
+#    cv2.waitKey(0)
+  pass
+
+
 #format: path,imgname
 def get_data_label_proxy_mxnet_threads(data_infos, datas, label_infos, labels, datalist, data_rndidx, batch_now, 
                    rndcrop=True, rndcont=False, rndnoise=False, rndrotate=True,
@@ -929,6 +949,85 @@ def get_data_label_proxy_batch_mxnet_threads(data_infos, datas, label_infos, lab
 
   return datas_nd, label_nd, carids, batch_info
 
+
+def get_data_label_proxy_batch_plate_mxnet_threads(data_infos, datas, label_infos, labels, datalist, batch_now, caridnum,
+                   rndcrop=True, rndcont=False, rndnoise=False, rndrotate=True,
+                   rndhflip=True, normalize=True):
+#  print label_infos
+  labelshape = label_infos[0][1]
+  batchsize = labelshape[0]
+  if (batch_now+1)*batchsize > len(datalist):
+    return None
+  
+#  t0 = time.time()
+  data_batch = []
+  idlist = []
+  batch_info = []
+  for idx in xrange(batch_now*batchsize, (batch_now+1)*batchsize):
+    data_batch.append(datalist[idx])
+    idlist.append(idx)
+  cars = []
+  for idx, onedata in zip(idlist, data_batch):
+    onecar = {}
+    parts = onedata.split(',')
+    onecar['path'] = parts[0]
+    onecar['id'] = parts[-1] 
+#    print onecar['id']
+    onecar['son'] = parts[1]
+    p = parts[2].replace(' ', ',')
+    onecar['plate'] = np.asarray(eval(p), dtype=np.int32)
+    cars.append(onecar)
+    carid = int(onecar['id'])
+    oneinfo = '%s,%s,%s'%(parts[0], parts[1], parts[2])
+    batch_info.append(oneinfo)
+
+  stdsize = data_infos[0][1][2:]
+  dataidx = 0
+  labels['proxy_yM'][:] = 0
+  labels['proxy_ZM'][:] = 1.0 
+  
+  tmpaths = []
+  tmpplates = []
+  carids = []
+  for si in xrange(batchsize):
+    onecar = cars[si]
+    carpath = onecar['path']
+    carid = int(onecar['id'])
+    carids.append(carid)
+    carson = onecar['son']
+    tmpath = carpath+'/'+carson
+    tmpaths.append(tmpath)
+    tmpplates.append(onecar['plate'])
+ 
+#  t1 = time.time()
+#  aug_data = aug_threads_c(tmpaths, data_infos[0][1])
+  aug_data = datas['databuffer']
+  aug_plate_threads_c(tmpaths, tmpplates, data_infos[0][1], aug_data)
+#  t2 = time.time()
+
+#  aug_data = aug_data.swapaxes(2, 3)
+#  aug_data = aug_data.swapaxes(1, 2)
+#  t3 = time.time()
+  datas['data'][:] = aug_data
+
+#  t4 = time.time()
+  #ready same data
+  for si in xrange(batchsize):
+    onecar = cars[si]
+    carid = int(onecar['id'])
+
+    labels['proxy_yM'][si, carid] = 1
+    labels['proxy_ZM'][si, carid] = 0
+    labels['proxy_ZM'][si, caridnum:] = 0
+    if False:
+      imgsave = (stdson*255).astype(np.uint8)
+      cv2.imwrite('tmpimg/stdson%d.jpg'%(int(carid)), imgsave)
+  datas_nd = [datas['data']]
+  label_nd = [labels['proxy_yM'], labels['proxy_ZM']]
+#  t5 = time.time()
+#  print t5-t4, t4-t3, t3-t2, t2-t1, t1-t0
+
+  return datas_nd, label_nd, carids, batch_info
 
 
 

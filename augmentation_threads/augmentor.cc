@@ -16,6 +16,7 @@ struct Aug_Params
   int needNum;
   int stdsize[2];
   float *pfImgOut;
+  int *pdwRect;//size=4
 };
 
 int showimage()
@@ -93,6 +94,7 @@ int rnd_crop(cv::Mat &matIn);
 int rnd_rotate(cv::Mat &matIn);
 int normalize_img(cv::Mat &matIn);
 int rnd_mask(cv::Mat &matIn);
+int rnd_block_mask(cv::Mat &matIn);
 
 void do_augment_onethread(void *p)
 {
@@ -131,7 +133,8 @@ void do_augment_onethread(void *p)
 //  int rnd0 = rand();
 //  if (rnd0 < (RAND_MAX / 4) * 3)
   {
-    rnd_mask(img);
+//    rnd_mask(img);
+//    rnd_block_mask(img);
   }
   
   //crop
@@ -255,10 +258,200 @@ int rnd_mask(cv::Mat &matIn)
 }
 
 
+int rnd_block_mask(cv::Mat &matIn)
+{
+  assert(matIn.type()==CV_8UC3);
+  int dwH = matIn.rows;
+  int dwW = matIn.cols;
+  
+  int rndH = (int)randMToN(dwH/4, dwH/2);
+  int rndW = (int)randMToN(dwW/4, dwW/2);
+  int rndRI = (int)randMToN(0, dwH-1);
+  int rndCI = (int)randMToN(0, dwW-1);
+  if (rndH + rndRI >= dwH)
+  {
+    rndRI = dwH - rndH - 1;
+  }
+  if (rndW + rndCI >= dwW)
+  {
+    rndCI = dwW - rndW - 1;
+  }
+  
+  for (int dwRI = 0; dwRI < rndH; dwRI++)
+  {
+    memset(matIn.data + ((dwRI + rndRI) * dwW + rndCI) * 3, 0, rndW * 3);
+  }
+
+  return 0;
+}
 
 
+//pdwRect: x, y, w, h
+int mask_plate(cv::Mat &matIn, int *pdwRect)
+{
+  assert(matIn.type()==CV_8UC3);
+  int dwH = matIn.rows;
+  int dwW = matIn.cols;
+  int dwPX = pdwRect[0], dwPY = pdwRect[1], dwPW = pdwRect[2], dwPH = pdwRect[3];
+ 
+  for (int dwRI = 0; dwRI < dwPH; dwRI++)
+  {
+    memset(matIn.data + ((dwRI + dwPY) * dwW + dwPX) * 3, 0, dwPW * 3);
+  }
+
+  return 0;
+}
+
+////////////
+void do_augment_plate_onethread(void *p);
+extern "C" int do_augment_plate_threads(char *pfns[], int *pdwPlates, int num, 
+                                  int stdH, int stdW, float *pfImgOut)
+{
+  const int cdwMaxTNum = 24;
+  static dg::ThreadPool *psPool = NULL;
+  if (psPool == NULL)
+  {
+    printf("Max Thread Number:%d\n", cdwMaxTNum);
+    psPool = new dg::ThreadPool(cdwMaxTNum);
+  }
+
+  srand(static_cast<unsigned>(time(0)));
+
+  vector<string> vecfn;
+  for (int i = 0; i < num; i++)
+  {
+    vecfn.push_back(pfns[i]);
+  }
+  condition_variable cv;
+  mutex countmt;
+  int dwFinishCount = 0;
+  int fnum = vecfn.size();
+  Aug_Params *pParams = new Aug_Params[fnum];
+
+  for (int fi=0; fi < fnum; fi++) 
+  {
+    string strfn = vecfn[fi];
+    pParams[fi].strfn = strfn;
+    pParams[fi].p_cv = &cv;
+    pParams[fi].p_countmt = &countmt;
+    pParams[fi].p_FinishCount = &dwFinishCount;
+    pParams[fi].needNum = fnum;
+    pParams[fi].stdsize[0] = stdH;
+    pParams[fi].stdsize[1] = stdW;
+    pParams[fi].pfImgOut = pfImgOut + fi * stdH * stdW * 3;
+    pParams[fi].pdwRect = pdwPlates + fi * 4;
+    psPool->enqueue(do_augment_plate_onethread, (void*)&pParams[fi]);
+  }
+
+  unique_lock<mutex> waitlc(countmt);
+  cv.wait(waitlc, [&dwFinishCount, &fnum](){return dwFinishCount==fnum;});
+
+//  for (int fi = 0; fi < fnum; fi++)
+//  {
+//    cv::Mat &img = pParams[fi].matOut;
+//    memcpy(pfImgOut + fi * stdH * stdW * 3,  
+//           img.data, sizeof(float) * stdH * stdW * 3);
+////    cv::imshow("hi", img);
+////    cv::waitKey(0);
+//  }
+
+  delete []pParams;
+  return 0;
+}
 
 
+void do_augment_plate_onethread(void *p)
+{
+  Aug_Params *pParam = (Aug_Params*)p;
+  string &strfn = pParam->strfn; 
+  mutex *p_countmt = pParam->p_countmt;
+  condition_variable *p_cv = pParam->p_cv;
+  int *p_FinishCount = pParam->p_FinishCount;
+  int needNum = pParam->needNum;
+  int stdH = pParam->stdsize[0];
+  int stdW = pParam->stdsize[1];
+  cv::Mat &matOut = pParam->matOut;
+  float *pfImgOut = pParam->pfImgOut;
+  int *pdwRect = pParam->pdwRect;
+
+  cv::Mat img = cv::imread(strfn);
+  if (img.cols==0)
+  {
+    printf("Can not read image %s\n", strfn.c_str());
+
+    unique_lock<mutex> countlc(*p_countmt);
+    if (*p_FinishCount < needNum)
+    {
+      (*p_FinishCount)++;
+    }
+    if ((*p_FinishCount) == needNum)
+    {
+      p_cv->notify_all();
+    } 
+    countlc.unlock();
+
+    return;
+  }
+ 
+  //random mask plate
+  int rnd0 = rand();
+  if (rnd0 < (RAND_MAX / 2))
+  {
+    mask_plate(img, pdwRect);
+  }
+//  printf("%s\n", strfn.c_str()); 
+  //mask rows
+//  int rnd0 = rand();
+//  if (rnd0 < (RAND_MAX / 4) * 3)
+  {
+//    rnd_mask(img);
+    rnd_block_mask(img);
+  }
+  
+  //crop
+  rnd_crop(img);
+  //reisze
+  cv::resize(img, img, cv::Size(stdW, stdH));
+  //normalize
+  normalize_img(img);
+  //rotate
+  rnd_rotate(img);
+  //flip
+  int rnd = rand();
+  if (rnd < RAND_MAX / 2)
+  {
+    cv::flip(img, img, 1);
+  }
+//  img.copyTo(matOut);
+  float *pfImg = (float*)img.data;
+
+  float *pfOutR = pfImgOut;
+  float *pfOutG = pfImgOut + stdH * stdW;
+  float *pfOutB = pfImgOut + stdH * stdW * 2;
+  for (int ri = 0; ri < stdH; ri++)
+  {
+    for (int ci = 0; ci < stdW; ci++)
+    {
+       int dwOft = ri * stdW + ci;
+       pfOutR[dwOft] = pfImg[dwOft * 3 + 0];
+       pfOutG[dwOft] = pfImg[dwOft * 3 + 1];
+       pfOutB[dwOft] = pfImg[dwOft * 3 + 2];
+    }
+  }
+
+  unique_lock<mutex> countlc(*p_countmt);
+  if (*p_FinishCount < needNum)
+  {
+    (*p_FinishCount)++;
+  }
+  if ((*p_FinishCount) == needNum)
+  {
+    p_cv->notify_all();
+  } 
+  countlc.unlock();
+
+  return;
+}
 
 
 
