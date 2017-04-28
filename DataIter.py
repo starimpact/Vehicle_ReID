@@ -696,7 +696,7 @@ class CarReID_Proxy_Batch_Plate_Mxnet_Iter2(mx.io.DataIter):
     proxy_Z_ptmp = np.random.rand(self.proxy_batchsize, self.featdim)-0.5
     self.proxy_Z_p = proxy_Z_ptmp.astype(np.float32)
     self.proxy_Z_map = np.zeros(self.proxy_batchsize, dtype=np.int32)-1
-    self.caridnum = None
+    self.caridnum = 0
     self.total_proxy_batch_epoch = 0
     self.repeat_times = repeat_times
     self.do_reset()
@@ -721,7 +721,7 @@ class CarReID_Proxy_Batch_Plate_Mxnet_Iter2(mx.io.DataIter):
     mx.nd.save(savename, [mx.nd.array(self.proxy_Z)])
 #    a = self.proxy_Z
 #    a = p_Z
-    print 'save proxy_Z into file', savename#, a#, a[a<0], a[a>0]
+    print 'save proxy_Z into file', savename#, num, self.caridnum, p_Z[:self.caridnum].sum()#, a#, a[a<0], a[a>0]
     pass
 
   def do_reset(self):
@@ -735,11 +735,13 @@ class CarReID_Proxy_Batch_Plate_Mxnet_Iter2(mx.io.DataIter):
       self.cur_proxy_batch = 0 
       self.big_epoch += 1
       self.rndidx_list = np.random.permutation(self.datalen)
+      print 'permutation....................'
 
     self.proxy_datalist = []
     carids = {}
     self.proxy_Z_map[:] = -1
     prndidxs = np.random.permutation(self.proxy_batchsize)
+#    print 'carid 0', self.caridnum, self.proxy_Z_p[:self.caridnum].sum()
     for i in xrange(self.proxy_batchsize):
       pidx = prndidxs[i]
       pxyi = self.cur_proxy_batch * self.proxy_batchsize + pidx
@@ -767,7 +769,7 @@ class CarReID_Proxy_Batch_Plate_Mxnet_Iter2(mx.io.DataIter):
     self.total_proxy_batch_epoch += 1
     if self.total_proxy_batch_epoch%self.repeat_times==0:
       self.cur_proxy_batch += 1
-#    print self.proxy_Z_p, self.proxy_Z_p.sum()
+#    print 'carid 1', self.caridnum, self.proxy_Z_p[:self.caridnum].sum()
     return self.caridnum, self.proxy_Z_p
 
   def __next__(self):
