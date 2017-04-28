@@ -961,13 +961,14 @@ def get_data_label_proxy_batch_plate_mxnet_threads(data_infos, datas, label_info
   
 #  t0 = time.time()
   data_batch = []
-  idlist = []
   batch_info = []
+#  rndidx_list = np.random.permutation(len(datalist))
   for idx in xrange(batch_now*batchsize, (batch_now+1)*batchsize):
+#  for bi in xrange(batchsize):
+#    idx = rndidx_list[bi]
     data_batch.append(datalist[idx])
-    idlist.append(idx)
   cars = []
-  for idx, onedata in zip(idlist, data_batch):
+  for onedata in data_batch:
     onecar = {}
     parts = onedata.split(',')
     onecar['path'] = parts[0]
@@ -1003,6 +1004,7 @@ def get_data_label_proxy_batch_plate_mxnet_threads(data_infos, datas, label_info
 #  aug_data = aug_threads_c(tmpaths, data_infos[0][1])
   aug_data = datas['databuffer']
   aug_plate_threads_c(tmpaths, tmpplates, data_infos[0][1], aug_data)
+#  aug_threads_c2(tmpaths, data_infos[0][1], aug_data)
 #  t2 = time.time()
 
 #  aug_data = aug_data.swapaxes(2, 3)
@@ -1012,13 +1014,15 @@ def get_data_label_proxy_batch_plate_mxnet_threads(data_infos, datas, label_info
 
 #  t4 = time.time()
   #ready same data
+  dim2 = labels['proxy_ZM'].shape[1]
   for si in xrange(batchsize):
     onecar = cars[si]
     carid = int(onecar['id'])
 
     labels['proxy_yM'][si, carid] = 1
     labels['proxy_ZM'][si, carid] = 0
-    labels['proxy_ZM'][si, caridnum:] = 0
+    if caridnum < dim2:
+      labels['proxy_ZM'][si, caridnum:] = 0
     if False:
       imgsave = (stdson*255).astype(np.uint8)
       cv2.imwrite('tmpimg/stdson%d.jpg'%(int(carid)), imgsave)

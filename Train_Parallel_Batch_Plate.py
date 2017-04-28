@@ -7,7 +7,8 @@ from DataIter import CarReID_Proxy_Batch_Mxnet_Iter
 from DataIter import CarReID_Proxy_Batch_Plate_Mxnet_Iter2
 from Solver import CarReID_Solver, CarReID_Softmax_Solver, CarReID_Proxy_Solver
 from MDL_PARAM import model2 as now_model
-from MDL_PARAM import model2_proxy_nca as proxy_nca_model
+#from MDL_PARAM import model2_proxy_nca as proxy_nca_model
+from MDL_PARAM import model3_proxy_nca as proxy_nca_model
 
 def save_checkpoint(model, prefix, epoch):
     model.symbol.save('%s-symbol.json' % prefix)
@@ -23,7 +24,7 @@ def load_checkpoint2(model, prefix, epoch):
     logging.info('Load checkpoint from \"%s\"', param_name)
     return arg_params, aux_params
 
-def load_checkpoint(model, prefix, epoch):
+def load_checkpoint(model, prefix, epoch, pZshape):
     param_name = '%s-%04d.params' % (prefix, epoch)
     save_dict = mx.nd.load(param_name)
     arg_params = {}
@@ -31,7 +32,7 @@ def load_checkpoint(model, prefix, epoch):
     for k, value in save_dict.items():
         arg_type, name = k.split(':', 1)
         if name=='proxy_Z_weight':
-            sp = value.shape
+            sp = pZshape
             rndv = np.random.rand(*sp)-0.5
             arg_params[name] = mx.nd.array(rndv)
             print 'skipped %s...'%name
@@ -86,7 +87,7 @@ def do_batch_end_call(reid_model, param_prefix, \
     train_data = args[0].locals['train_data']  
     
     #synchronize parameters in small period.
-    if nbatch%8==0:
+    if nbatch%16==0:
       arg_params, aux_params = reid_model.get_params()
       reid_model.set_params(arg_params, aux_params)
 
@@ -244,7 +245,7 @@ def Do_Proxy_NCA_Train3():
   devicenum = len(ctxs) 
 
   num_epoch = 1000000
-  batch_size = 32*devicenum
+  batch_size = 28*devicenum
   show_period = 1000
 
   assert(batch_size%devicenum==0)
@@ -267,16 +268,16 @@ def Do_Proxy_NCA_Train3():
   datapath = '/mnt/ssd2/minzhang/ReID_origin/mingzhang/'
 #  datapath = '/mnt/ssd2/minzhang/ReID_origin/mingzhang2/'
 
-  datafn_list = ['front_plate_image_list_train.list', 'back_plate_image_list_train.list'] #220160 calss number.
+  datafn_list = ['front_plate_image_list_train.list']#, 'back_plate_image_list_train.list'] #220160 calss number.
 
   for di in xrange(len(datafn_list)):
     datafn_list[di] = datapath + datafn_list[di]
   data_train = CarReID_Proxy_Batch_Plate_Mxnet_Iter2(['data'], [data_shape], ['proxy_yM', 'proxy_ZM'], [proxy_yM_shape, proxy_ZM_shape], datafn_list, total_proxy_num, featdim, proxy_batch, 1)
   
-  dlr = 800000/batch_size
+  dlr = 200000/batch_size
 #  dlr_steps = [dlr, dlr*2, dlr*3, dlr*4]
 
-  lr_start = (10**-2)
+  lr_start = (10**-1)
   lr_min = 10**-5
   lr_reduce = 0.95
   lr_stepnum = np.log(lr_min/lr_start)/np.log(lr_reduce)
@@ -286,7 +287,8 @@ def Do_Proxy_NCA_Train3():
   print dlr_steps
   lr_scheduler = mx.lr_scheduler.MultiFactorScheduler(dlr_steps, lr_reduce)
   param_prefix = 'MDL_PARAM/params2_proxy_nca/car_reid'
-  load_paramidx = 3
+  param_prefix = 'MDL_PARAM/params3_proxy_nca/car_reid'
+  load_paramidx = None
 
   reid_net = proxy_nca_model.CreateModel_Color2(None, bsz_per_device, proxy_num, data_shape[2:])
 
@@ -326,7 +328,7 @@ def Do_Proxy_NCA_Train3():
   if True and load_paramidx is not None :
     reid_model.bind(data_shapes=data_train.provide_data, 
                     label_shapes=data_train.provide_label)
-    arg_params, aux_params = load_checkpoint(reid_model, param_prefix, load_paramidx)
+    arg_params, aux_params = load_checkpoint(reid_model, param_prefix, load_paramidx, proxy_Z_shape)
     do_epoch_end_call(param_prefix, None, reid_model, \
                       arg_params, aux_params, \
                       None, data_train, \
@@ -343,6 +345,8 @@ def Do_Proxy_NCA_Train3():
                  begin_epoch=0, num_epoch=num_epoch, 
                  eval_end_callback=None,
                  kvstore=None,# monitor=mon,
+#                 kvstore='local_allreduce_device',# monitor=mon,
+#                 kvstore='local_allreduce_cpu',# monitor=mon,
                  batch_end_callback=batch_end_calls,
                  epoch_end_callback=epoch_all_calls) 
 
