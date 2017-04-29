@@ -1034,6 +1034,61 @@ def get_data_label_proxy_batch_plate_mxnet_threads(data_infos, datas, label_info
   return datas_nd, label_nd, carids, batch_info
 
 
+def get_data_label_pair_threads(data_infos, datas, label_infos, labels, datalist, rndidx, batch_now):
+#  print label_infos
+  labelshape = label_infos[0][1]
+  batchsize = labelshape[0]
+  if (batch_now+1)*batchsize > len(datalist):
+    return None
+  
+  data_batch = []
+  for idx in xrange(batch_now*batchsize, (batch_now+1)*batchsize):
+    idx = rndidx[idx]
+    data_batch.append(datalist[idx])
+  cars = []
+  for onedata in data_batch:
+    onecar = {}
+    parts = onedata.split(',')
+    onecar['path'] = parts[0]
+    onecar['id'] = parts[-1] 
+    onecar['son'] = parts[1]
+    p = parts[2].replace(' ', ',')
+    onecar['plate'] = np.asarray(eval(p), dtype=np.int32)
+    cars.append(onecar)
+
+  stdsize = data_infos[0][1][2:]
+  dataidx = 0
+  
+  tmpaths = []
+  tmpplates = []
+  carids = []
+  for si in xrange(batchsize):
+    onecar = cars[si]
+    carpath = onecar['path']
+    carid = int(onecar['id'])
+    carids.append(carid)
+    carson = onecar['son']
+    tmpath = carpath+'/'+carson
+    tmpaths.append(tmpath)
+    tmpplates.append(onecar['plate'])
+ 
+  aug_data = datas['databuffer']
+  aug_plate_threads_c(tmpaths, tmpplates, data_infos[0][1], aug_data)
+#  aug_threads_c2(tmpaths, data_infos[0][1], aug_data)
+  datas['data'][:] = aug_data
+  #ready same data
+  for si in xrange(batchsize):
+    onecar = cars[si]
+    carid = int(onecar['id'])
+    labels['id'][si, 0] = carid
+    if False:
+      imgsave = (stdson*255).astype(np.uint8)
+      cv2.imwrite('tmpimg/stdson%d.jpg'%(int(carid)), imgsave)
+  datas_nd = [datas['data']]
+  label_nd = [labels['id']]
+
+  return datas_nd, label_nd
+
 
 
 

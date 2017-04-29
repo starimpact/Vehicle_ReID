@@ -392,35 +392,42 @@ void do_augment_plate_onethread(void *p)
 
     return;
   }
- 
-  //random mask plate
-  int rnd0 = rand();
-  if (rnd0 < (RAND_MAX / 2))
-  {
-    mask_plate(img, pdwRect);
+  int dwDoAug = 1;
+
+  if (dwDoAug)
+  { 
+    //random mask plate
+    int rnd0 = rand();
+    if (rnd0 < (RAND_MAX / 2))
+    {
+      mask_plate(img, pdwRect);
+    }
+  //  printf("%s\n", strfn.c_str()); 
+    //mask rows
+  //  int rnd0 = rand();
+  //  if (rnd0 < (RAND_MAX / 4) * 3)
+    {
+  //    rnd_mask(img);
+      rnd_block_mask(img);
+    }
+    
+    //crop
+    rnd_crop(img);
   }
-//  printf("%s\n", strfn.c_str()); 
-  //mask rows
-//  int rnd0 = rand();
-//  if (rnd0 < (RAND_MAX / 4) * 3)
-  {
-//    rnd_mask(img);
-    rnd_block_mask(img);
-  }
-  
-  //crop
-  rnd_crop(img);
   //reisze
   cv::resize(img, img, cv::Size(stdW, stdH));
   //normalize
   normalize_img(img);
-  //rotate
-  rnd_rotate(img);
-  //flip
-  int rnd = rand();
-  if (rnd < RAND_MAX / 2)
+  if (dwDoAug)
   {
-    cv::flip(img, img, 1);
+    //rotate
+    rnd_rotate(img);
+    //flip
+    int rnd = rand();
+    if (rnd < RAND_MAX / 2)
+    {
+      cv::flip(img, img, 1);
+    }
   }
 //  img.copyTo(matOut);
   float *pfImg = (float*)img.data;

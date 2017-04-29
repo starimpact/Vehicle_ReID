@@ -156,7 +156,7 @@ def Do_Proxy_NCA_Train2():
   dlr = 200000/batch_size
 #  dlr_steps = [dlr, dlr*2, dlr*3, dlr*4]
 
-  lr_start = (10**-1)
+  lr_start = (10**-3)
   lr_min = 10**-5
   lr_reduce = 0.95
   lr_stepnum = np.log(lr_min/lr_start)/np.log(lr_reduce)
@@ -166,7 +166,7 @@ def Do_Proxy_NCA_Train2():
   print dlr_steps
   lr_scheduler = mx.lr_scheduler.MultiFactorScheduler(dlr_steps, lr_reduce)
   param_prefix = 'MDL_PARAM/params2_proxy_nca/car_reid'
-  load_paramidx = None 
+  load_paramidx = 3 
 
   reid_net = proxy_nca_model.CreateModel_Color2(None, bsz_per_device, proxy_num, data_shape[2:])
 
@@ -244,7 +244,7 @@ def Do_Proxy_NCA_Train3():
   devicenum = len(ctxs) 
 
   num_epoch = 1000000
-  batch_size = 28*devicenum
+  batch_size = 24*devicenum
   show_period = 1000
 
   assert(batch_size%devicenum==0)
@@ -253,7 +253,7 @@ def Do_Proxy_NCA_Train3():
   bucket_key = bsz_per_device
 
   featdim = 128
-  total_proxy_num = 220160#142149#196166#406448#548597
+  total_proxy_num = 261708#220160#142149#196166#406448#548597
   proxy_batch = 40000
   proxy_num = proxy_batch
   clsnum = proxy_num
@@ -263,11 +263,13 @@ def Do_Proxy_NCA_Train3():
   proxy_ZM_shape = (batch_size, proxy_num)
   label_shape = dict(zip(['proxy_yM', 'proxy_ZM'], [proxy_yM_shape, proxy_ZM_shape]))
   proxyfn = 'proxy.bin'
-  datapath = '/home/mingzhang/data/ReID_origin/mingzhang/'
+#  datapath = '/home/mingzhang/data/ReID_origin/mingzhang/'
+  datapath = '/home/mingzhang/data/ReID_origin/mingzhang2/'
 #  datapath = '/mnt/ssd2/minzhang/ReID_origin/mingzhang/'
 #  datapath = '/mnt/ssd2/minzhang/ReID_origin/mingzhang2/'
 
-  datafn_list = ['front_plate_image_list_train.list']#, 'back_plate_image_list_train.list'] #220160 calss number.
+#  datafn_list = ['front_plate_image_list_train.list', 'back_plate_image_list_train.list'] #220160 calss number.
+  datafn_list = ['front_plate_image_list_train.list', 'back_plate_image_list_train.list'] #261708 calss number.
 
   for di in xrange(len(datafn_list)):
     datafn_list[di] = datapath + datafn_list[di]
@@ -276,7 +278,7 @@ def Do_Proxy_NCA_Train3():
   dlr = 400000/batch_size
 #  dlr_steps = [dlr, dlr*2, dlr*3, dlr*4]
 
-  lr_start = (10**-1)
+  lr_start = (10**-1)*1
   lr_min = 10**-5
   lr_reduce = 0.95
   lr_stepnum = np.log(lr_min/lr_start)/np.log(lr_reduce)
@@ -285,7 +287,7 @@ def Do_Proxy_NCA_Train3():
   print 'lr_start:%.1e, lr_min:%.1e, lr_reduce:%.2f, lr_stepsnum:%d'%(lr_start, lr_min, lr_reduce, lr_stepnum)
   print dlr_steps
   lr_scheduler = mx.lr_scheduler.MultiFactorScheduler(dlr_steps, lr_reduce)
-  param_prefix = 'MDL_PARAM/params2_proxy_nca/car_reid'
+#  param_prefix = 'MDL_PARAM/params2_proxy_nca/car_reid'
   param_prefix = 'MDL_PARAM/params3_proxy_nca/car_reid'
   load_paramidx = None
 
@@ -352,13 +354,56 @@ def Do_Proxy_NCA_Train3():
 
   return 
 
+from DataIter import CarReID_Predict_Iter
 
+def prepare_proxy_Z(proxyfn='proxy_Z.params'):
+  print 'prepare proxy_Z...'
+ 
+  ctxs = [mx.gpu(0), mx.gpu(1), mx.gpu(2), mx.gpu(3), mx.gpu(4), mx.gpu(5), mx.gpu(6), mx.gpu(7)]
+  batchsize = 128 * len(ctxs)
+  data_shape = (batchsize, 3, 299, 299)
+  label_shape = (batchsize, 1)
+  proxy_num = 261708
+  featdim = 128
+  proxy_Z_shape = (proxy_num, featdim)
+
+  datapath = '/home/mingzhang/data/ReID_origin/mingzhang2/'
+  datafn_list = ['front_plate_image_list_train.list', 'back_plate_image_list_train.list'] #261708 calss number.
+  for di in xrange(len(datafn_list)):
+    datafn_list[di] = datapath + datafn_list[di]
+
+  data_predict = CarReID_Predict_Iter(['part1_data'], [data_shape], ['id'], [label_shape], datafn_list) 
+  reid_feature_net, _ = proxy_nca_model.CreateModel_Color_Split_test()
+  reid_model = mx.mod.Module(context=ctxs, symbol=reid_feature_net, data_names=['part1_data'])
+  reid_model.bind(data_shapes=data_predict.provide_data, for_training=False)
+  param_prefix = 'MDL_PARAM/params3_proxy_nca/car_reid'
+  load_paramidx = 3
+  arg_params, aux_params = load_checkpoint(reid_model, param_prefix, load_paramidx, proxy_Z_shape)
+  
+  proxy_Z = np.random.rand(proxy_num, featdim)-0.5 
+  proxy_Z = proxy_Z.astype(np.float32)
+  proxy_Z_num = np.zeros(proxy_num, dtype=np.int32)
+  for data in data_predict:
+    reid_model.forward(data)
+    batch_Z = reid_model.get_outputs()[0].asnumpy()
+    label = data.label[0].asnumpy().flatten()
+    proxy_Z[label, :] = batch_Z
+    proxy_Z_num[label] = 1
+    num = proxy_Z_num.sum()
+    print "batch:%d/%d, proxy_num:%.2f%%(%d/%d)..."%(data_predict.cur_batch, data_predict.num_batches, num*100.0/proxy_num, num, proxy_num)
+    if num >= proxy_num:
+      print 'initialize proxy_Z is finished...'
+      break
+  mx.nd.save(savename, [mx.nd.array(proxy_Z)]) 
+  print 'saved proxy_Z into file', savename
+  pass
 
 
 if __name__=='__main__':
+  prepare_proxy_Z()
 #  Do_Train()
 #  Do_Proxy_NCA_Train()
 #  Do_Proxy_NCA_Train2()
-  Do_Proxy_NCA_Train3()
+#  Do_Proxy_NCA_Train3()
 
 

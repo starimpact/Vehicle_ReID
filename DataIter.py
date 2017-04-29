@@ -49,6 +49,50 @@ class CarReID_Iter(mx.io.DataIter):
       raise StopIteration
 
 
+class CarReID_Predict_Iter(mx.io.DataIter):
+  def __init__(self, data_names, data_shapes, label_names, label_shapes, datafn_list):
+    super(CarReID_Predict_Iter, self).__init__()
+
+    self._provide_data = zip(data_names, data_shapes)
+    self._provide_label = zip(label_names, label_shapes)
+    self.cur_batch = 0
+    self.datalist = dg.get_datalist2(datafn_list)
+    self.datalen = len(self.datalist)
+    self.rndidx_list = np.random.permutation(self.datalen)
+    self.num_batches = self.datalen / label_shapes[0][0]
+    self.datas_batch = {}
+    self.datas_batch['data'] = mx.nd.zeros(data_shapes[0], dtype=np.float32)
+    self.datas_batch['databuffer'] = np.zeros(data_shapes[0], dtype=np.float32)
+    self.labels_batch = {}
+    self.labels_batch['id'] = mx.nd.zeros(label_shapes[0], dtype=np.int32)
+
+
+  def __iter__(self):
+    return self
+
+  def reset(self):
+    self.cur_batch = 0        
+    self.rndidx_list = np.random.permutation(self.datalen)
+
+  def __next__(self):
+    return self.next()
+
+  @property
+  def provide_data(self):
+    return self._provide_data
+
+  @property
+  def provide_label(self):
+    return self._provide_label
+
+  def next(self):
+    if self.cur_batch < self.num_batches:
+      self.cur_batch += 1
+      datas, labels = dg.get_data_label_pair_threads(self._provide_data, self.datas_batch, self._provide_label, self.labels_batch, self.datalist, self.rndidx_list, self.cur_batch) 
+      return mx.io.DataBatch(datas, labels)
+    else:
+      raise StopIteration
+
 
 
 
