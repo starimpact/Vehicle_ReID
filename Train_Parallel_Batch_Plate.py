@@ -278,7 +278,7 @@ def Do_Proxy_NCA_Train3():
   dlr = 400000/batch_size
 #  dlr_steps = [dlr, dlr*2, dlr*3, dlr*4]
 
-  lr_start = (10**-1)*1
+  lr_start = (10**-2)*1
   lr_min = 10**-5
   lr_reduce = 0.95
   lr_stepnum = np.log(lr_min/lr_start)/np.log(lr_reduce)
@@ -289,7 +289,7 @@ def Do_Proxy_NCA_Train3():
   lr_scheduler = mx.lr_scheduler.MultiFactorScheduler(dlr_steps, lr_reduce)
 #  param_prefix = 'MDL_PARAM/params2_proxy_nca/car_reid'
   param_prefix = 'MDL_PARAM/params3_proxy_nca/car_reid'
-  load_paramidx = None
+  load_paramidx = 3
 
   reid_net = proxy_nca_model.CreateModel_Color2(None, bsz_per_device, proxy_num, data_shape[2:])
 
@@ -391,19 +391,24 @@ def prepare_proxy_Z(proxyfn='proxy_Z.params'):
     proxy_Z_num[label] = 1
     num = proxy_Z_num.sum()
     print "batch:%d/%d, proxy_num:%.2f%%(%d/%d)..."%(data_predict.cur_batch, data_predict.num_batches, num*100.0/proxy_num, num, proxy_num)
+    if data_predict.cur_batch%100==0:
+      savename = proxyfn
+      mx.nd.save(savename, [mx.nd.array(proxy_Z)]) 
+      print 'saved proxy_Z into file', savename
     if num >= proxy_num:
       print 'initialize proxy_Z is finished...'
       break
+  savename = proxyfn
   mx.nd.save(savename, [mx.nd.array(proxy_Z)]) 
   print 'saved proxy_Z into file', savename
   pass
 
 
 if __name__=='__main__':
-  prepare_proxy_Z()
+#  prepare_proxy_Z()
 #  Do_Train()
 #  Do_Proxy_NCA_Train()
 #  Do_Proxy_NCA_Train2()
-#  Do_Proxy_NCA_Train3()
+  Do_Proxy_NCA_Train3()
 
 

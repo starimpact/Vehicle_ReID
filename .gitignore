@@ -6,4 +6,4 @@ ImageResult
 *.bin
 tmpimg
 augmentation_threads/build
-proxy_Z.params
+proxy_Z.params*
