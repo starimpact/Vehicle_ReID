@@ -6,7 +6,8 @@ from DataIter import CarReID_Iter, CarReID_Test_Iter, CarReID_Feat_Query_Iter, C
 from Solver import CarReID_Solver
 from Predictor import CarReID_Predictor, CarReID_Feature_Predictor, CarReID_Compare_Predictor, CarReID_Softmax_Predictor
 #from MDL_PARAM import model2_softmax as now_model
-from MDL_PARAM import model2_proxy_nca as now_model
+#from MDL_PARAM import model2_proxy_nca as now_model
+from MDL_PARAM import model3_proxy_nca as now_model
 
 def Do_Test():
   print 'Testing...'
@@ -70,6 +71,7 @@ def Do_Feature_Test(restore, ctx=mx.cpu()):
 #  param_prefix = 'MDL_PARAM/params2_softmax/car_reid'
   param_prefix = 'MDL_PARAM/params2_proxy_nca_combine/car_reid'
   param_prefix = 'MDL_PARAM/params2_proxy_nca/car_reid'
+  param_prefix = 'MDL_PARAM/params3_proxy_nca/car_reid'
   predictor_feature = CarReID_Feature_Predictor(param_prefix, reid_feature_net, ctx, data_shape)
 
   print 'Extracting feature...'
@@ -116,6 +118,7 @@ def Do_Compare_Test(restore, ctx=mx.cpu()):
 #  param_prefix = 'MDL_PARAM/params2_softmax/car_reid'
   param_prefix = 'MDL_PARAM/params2_proxy_nca_combine/car_reid'
   param_prefix = 'MDL_PARAM/params2_proxy_nca/car_reid'
+  param_prefix = 'MDL_PARAM/params3_proxy_nca/car_reid'
   predictor_compare = CarReID_Compare_Predictor(param_prefix, reid_cmp_net, ctx, data_shape)
 
   print 'Comparing...'
