@@ -470,7 +470,15 @@ def create_reid4_net(batch_size, proxy_num):
   proxy_ZMs = mx.sym.SliceChannel(proxy_ZM, axis=0, num_outputs=batch_size, name='proxy_ZM_slice')
   proxy_ncas = []
   min_value = 10**-16
-  norm_value = (84**0.5)/2
+#  norm_value = (84**0.5)/2
+#  norm_value = np.log(2.0**128)/4
+  useSquare = True
+  useHing = True
+  print 'useSquare:', useSquare, ', useHing:', useHing
+  if useSquare:
+    norm_value = np.log((2.0**128)/proxy_num)/2 #2.0**128 is the maxinum value of float32
+  else:
+    norm_value = np.log((2.0**128)/proxy_num)/(2*np.sqrt(128)) #2.0**128 is the maxinum value of float32, 128 is the featnum
   print 'norm_value:', norm_value
   
   #norm
@@ -497,15 +505,14 @@ def create_reid4_net(batch_size, proxy_num):
 
     tzM = mx.sym.Reshape(one_proxy_ZM, shape=(-1,))
     z = mx.sym.broadcast_minus(one_feat, proxy_Z)
-    z = mx.sym.square(z)
-    z = mx.sym.sum_axis(z, axis=1)
-#    print 'z:', z.name
+    if useSquare:
+      z = mx.sym.square(z)
+      z = mx.sym.sum_axis(z, axis=1)
+      z = mx.sym.sqrt(z)
+    else:
+      z = mx.sym.abs(z)
+      z = mx.sym.sum_axis(z, axis=1)
     z = -z
-#    z = mx.sym.exp(z)
-#    print 'z:', z.name
-#    z = z * tzM
-#    z = mx.sym.sum(z)# + min_value 
-#    print 'z:', z.name
 
     tyM = mx.sym.Reshape(one_proxy_yM, shape=(-1, 1))
     one_proxy_y = mx.sym.broadcast_mul(tyM, proxy_Z)
@@ -513,12 +520,14 @@ def create_reid4_net(batch_size, proxy_num):
 #    print 'one_proxy_y:', one_proxy_y.name
     one_feat = mx.sym.Reshape(one_feat, shape=(-1,))
     y = one_feat - one_proxy_y
-    y = mx.sym.square(y)
-    y = mx.sym.sum(y)
-#    print 'y:', y.name
+    if useSquare:
+      y = mx.sym.square(y)
+      y = mx.sym.sum(y)
+      y = mx.sym.sqrt(y)
+    else:
+      y = mx.sym.abs(y)
+      y = mx.sym.sum(y)
     y = -y
-#    y = mx.sym.exp(y) + min_value
-#    one_proxy_nca = -mx.sym.log(y/z)
 
 #    print 'z:', z.name, 'y:', y.name
     z_y = mx.sym.broadcast_minus(z, y)
@@ -531,8 +540,10 @@ def create_reid4_net(batch_size, proxy_num):
     proxy_ncas.append(one_proxy_nca)
 
   proxy_nca = mx.sym.Concat(*proxy_ncas, dim=0)
-  reid_net = proxy_nca 
-#  reid_net = proxy_nca
+  if useHing:
+    reid_net = mx.sym.maximum(0.0, proxy_nca)
+  else:
+    reid_net = proxy_nca
   reid_net = mx.sym.MakeLoss(reid_net, name='proxy_nca_loss')
 
 #  print args_all

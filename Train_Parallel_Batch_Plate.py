@@ -235,8 +235,8 @@ def Do_Proxy_NCA_Train3():
   logger.setLevel(logging.INFO)
   
 
-  ctxs = [mx.gpu(0), mx.gpu(1), mx.gpu(2), mx.gpu(3), mx.gpu(4), mx.gpu(5), mx.gpu(6), mx.gpu(7)]
-#  ctxs = [mx.gpu(0), mx.gpu(1), mx.gpu(2), mx.gpu(3)]
+#  ctxs = [mx.gpu(0), mx.gpu(1), mx.gpu(2), mx.gpu(3), mx.gpu(4), mx.gpu(5), mx.gpu(6), mx.gpu(7)]
+  ctxs = [mx.gpu(0), mx.gpu(1), mx.gpu(2), mx.gpu(3)]
 #  ctxs = [mx.gpu(2), mx.gpu(1), mx.gpu(3)]
 #  ctxs = [mx.gpu(0), mx.gpu(1)]
 #  ctxs = [mx.gpu(0)]
@@ -264,12 +264,12 @@ def Do_Proxy_NCA_Train3():
   label_shape = dict(zip(['proxy_yM', 'proxy_ZM'], [proxy_yM_shape, proxy_ZM_shape]))
   proxyfn = 'proxy.bin'
 #  datapath = '/home/mingzhang/data/ReID_origin/mingzhang/'
-  datapath = '/home/mingzhang/data/ReID_origin/mingzhang2/'
+#  datapath = '/home/mingzhang/data/ReID_origin/mingzhang2/'
 #  datapath = '/mnt/ssd2/minzhang/ReID_origin/mingzhang/'
-#  datapath = '/mnt/ssd2/minzhang/ReID_origin/mingzhang2/'
+  datapath = '/mnt/ssd2/minzhang/ReID_origin/mingzhang2/'
 
-#  datafn_list = ['front_plate_image_list_train.list', 'back_plate_image_list_train.list'] #220160 calss number.
   datafn_list = ['front_plate_image_list_train.list', 'back_plate_image_list_train.list'] #261708 calss number.
+#  datafn_list = ['data_each_part6.list', 'data_each_part7.list'] #142149 calss number.
 
   for di in xrange(len(datafn_list)):
     datafn_list[di] = datapath + datafn_list[di]
@@ -278,7 +278,7 @@ def Do_Proxy_NCA_Train3():
   dlr = 400000/batch_size
 #  dlr_steps = [dlr, dlr*2, dlr*3, dlr*4]
 
-  lr_start = (10**-2)*1
+  lr_start = (10**-3)*1
   lr_min = 10**-5
   lr_reduce = 0.95
   lr_stepnum = np.log(lr_min/lr_start)/np.log(lr_reduce)
@@ -356,10 +356,11 @@ def Do_Proxy_NCA_Train3():
 
 from DataIter import CarReID_Predict_Iter
 
-def prepare_proxy_Z(proxyfn='proxy_Z.params'):
+def prepare_proxy_Z(proxyfn='proxy_Z_gen.params'):
   print 'prepare proxy_Z...'
  
   ctxs = [mx.gpu(0), mx.gpu(1), mx.gpu(2), mx.gpu(3), mx.gpu(4), mx.gpu(5), mx.gpu(6), mx.gpu(7)]
+  ctxs = [mx.gpu(0), mx.gpu(1), mx.gpu(2), mx.gpu(3)]
   batchsize = 128 * len(ctxs)
   data_shape = (batchsize, 3, 299, 299)
   label_shape = (batchsize, 1)
