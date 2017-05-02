@@ -170,7 +170,7 @@ class CarReID_Compare_Predictor(object):
   def get_params(self):
     arg_names = self.symbol.list_arguments()
     arg_shapes, _, aux_shapes = \
-                self.symbol.infer_shape(feature1_data=self.data_shape,
+                self.symbol.infer_shape(feature1_data=(1, self.data_shape[1]),
                                         feature2_data=self.data_shape)
 
     self.arg_params = {}
@@ -209,6 +209,7 @@ class CarReID_Compare_Predictor(object):
       id1 = dquery['ids'][0]
       data1 = dquery['data']
       cmpfile = open('Result/cmp=%s=%s.list'%(id1, dquery['names'][0]), 'w')
+      print data1.shape, self.arg_params['feature1_data'].asnumpy().shape
       self.arg_params['feature1_data'][:] = mx.nd.array(data1, self.ctx)
       data_set.reset()
       t0 = time.time()
@@ -225,12 +226,14 @@ class CarReID_Compare_Predictor(object):
           cmp_scores = np.sum(cmp_scores, axis=1)
 #          print data2.shape, cmp_scores
         writestrs = ''
+#        t0_0 = time.time()
         for bi in xrange(data_set.batchsize):
           id2 = id2s[bi]
           onename = dset['names'][bi]
           cmp_score = cmp_scores[bi]
           writestrs += '%s,%s,%f\n'%(id2, onename, cmp_score)
 #          print 'query:%s,%d; dset:%s,%d; %.3f'%(id1, data_query.cur_idx, id2, data_set.cur_idx*data_set.batchsize+bi, cmp_score)
+#        t1_0 = time.time()
         cmpfile.write(writestrs) 
         cmpfile.flush()
       cmpfile.close()
@@ -399,4 +402,12 @@ class CarReID_Compare_Predictor__(object):
             cmpfile.flush()
             print 'query:%s,%d; dset:%s,%d; %.3f'%(id1, data_query.cur_idx, id2, data_set.cur_idx, cmp_score)
         cmpfile.close()
+
+
+
+
+
+
+
+
 

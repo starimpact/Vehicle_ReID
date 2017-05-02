@@ -145,6 +145,7 @@ def get_data_label_test(data_shape, datalist, which_car
   carinfo = {}
   carinfo['id'] = onecar['id']
   carinfo['sons'] = []
+  t0 = time.time()
   for si in xrange(num_sons):
     queryone = onecar['sons'][si]
     tmppath = onecar['path'] + '/' + queryone
@@ -161,6 +162,8 @@ def get_data_label_test(data_shape, datalist, which_car
     soninfo['name'] = queryone
     soninfo['data'] = stdson_tmp
     carinfo['sons'].append(soninfo)
+  t1 = time.time()
+  print 'get_data_label_test:', t1-t0
   
   return carinfo
 
@@ -230,6 +233,7 @@ def get_feature_label_test(data_shape, datalist, which_batch):
   batchsize = data_shape[0]
   query_batch = datalist[which_batch*batchsize:(which_batch+1)*batchsize]
   batch_info = {'paths':[], 'ids':[], 'names':[], 'data':np.zeros(data_shape, dtype=np.float32)}
+  t0 = time.time()
   for qli, query_line in enumerate(query_batch):
     parts = query_line.split(',')
     pathpre = parts[0]
@@ -242,6 +246,8 @@ def get_feature_label_test(data_shape, datalist, which_batch):
     batch_info['paths'].append(pathnow)
     batch_info['ids'].append(idnow)
     batch_info['names'].append(namenow)
+  t1 = time.time()
+  print 'label_test:', t1-t0
   
   return batch_info
 
@@ -594,6 +600,24 @@ def  aug_plate_threads_c(paths, tmpplates, tmpshape, imgsout):
 #    cv2.imshow('hi', img)
 #    cv2.waitKey(0)
   pass
+
+def  get_test_threads_c(paths, tmpshape, imgsout):
+  _, chs, stdH, stdW = tmpshape 
+  imgnum = len(paths)
+  strs = (c_char_p*imgnum)()
+  strs[:] = paths
+#  t0 = time.time()
+  func_c.do_get_test_threads(strs, imgnum, stdH, stdW, imgsout.ctypes.data_as(POINTER(c_float)))
+#  t1 = time.time()
+#  print t1-t0
+#  for i in xrange(imgnum):
+#    img = imgsout[i]
+#    img = img.swapaxes(0, 1)
+#    img = img.swapaxes(1, 2)
+#    cv2.imshow('hi', img)
+#    cv2.waitKey(0)
+  pass
+
 
 
 #format: path,imgname
@@ -1089,6 +1113,66 @@ def get_data_label_pair_threads(data_infos, datas, label_infos, labels, datalist
 
   return datas_nd, label_nd
 
+
+def get_test_data_label_pair_threads(data_infos, datas, label_infos, labels, datalist, batch_now):
+#  print label_infos
+  labelshape = label_infos[0][1]
+  batchsize = labelshape[0]
+  dlen = len(datalist)
+  data_batch = []
+  if (batch_now+1)*batchsize < dlen:
+    for idx in xrange(batch_now*batchsize, (batch_now+1)*batchsize):
+      data_batch.append(datalist[idx])
+  else:
+    for idx in xrange(batch_now*batchsize, dlen):
+      data_batch.append(datalist[idx])   
+  cars = []
+  for onedata in data_batch:
+    onecar = {}
+    parts = onedata.split(',')
+    onecar['path'] = parts[0]
+    onecar['id'] = parts[-1] 
+    onecar['son'] = parts[1]
+    onecar['type'] = 0
+    if onecar['son'].find('noplate'):
+      onecar['type'] = 1
+#    p = parts[2].replace(' ', ',')
+#    onecar['plate'] = np.asarray(eval(p), dtype=np.int32)
+    cars.append(onecar)
+
+  stdsize = data_infos[0][1][2:]
+  dataidx = 0
+  
+  tmpaths = []
+  carids = []
+  real_batchsize = len(cars)
+  for si in xrange(real_batchsize):
+    onecar = cars[si]
+    carpath = onecar['path']
+    carid = int(onecar['id'])
+    carids.append(carid)
+    carson = onecar['son']
+    tmpath = carpath+'/'+carson
+    tmpaths.append(tmpath)
+ 
+  aug_data = datas['databuffer']
+  aug_data[:] = 0
+  get_test_threads_c(tmpaths, data_infos[0][1], aug_data)
+  datas['data'][:] = aug_data
+  labels['id'][:] = -1
+  #ready same data
+  for si in xrange(real_batchsize):
+    onecar = cars[si]
+    carid = int(onecar['id'])
+    labels['id'][si, 0] = carid
+    labels['id'][si, 1] = onecar['type']
+    if False:
+      imgsave = (stdson*255).astype(np.uint8)
+      cv2.imwrite('tmpimg/stdson%d.jpg'%(int(carid)), imgsave)
+  datas_nd = [datas['data']]
+  label_nd = [labels['id']]
+
+  return datas_nd, label_nd, tmpaths
 
 
 
