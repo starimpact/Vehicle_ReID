@@ -1134,7 +1134,7 @@ def get_test_data_label_pair_threads(data_infos, datas, label_infos, labels, dat
     onecar['id'] = parts[-1] 
     onecar['son'] = parts[1]
     onecar['type'] = 0
-    if onecar['son'].find('noplate'):
+    if onecar['son'].find('noplate')>=0:
       onecar['type'] = 1
 #    p = parts[2].replace(' ', ',')
 #    onecar['plate'] = np.asarray(eval(p), dtype=np.int32)

@@ -3,6 +3,8 @@ import numpy as np
 import mxnet as mx
 import cPickle
 import time
+from ctypes import *
+
  
 import DataGenerator as dg
 from DataIter import CarReID_Iter, CarReID_Test_Iter, CarReID_Feat_Query_Iter, CarReID_Feat_Iter, CarReID_Softmax_Iter
@@ -211,50 +213,6 @@ def do_predict_feature(predict_model, data_iter, savefolder, nn):
   pass
 
 
-def Do_Feature_Test_Fast(load_paramidx):
-  print 'Extracting feature Fast...'
-
-  ctxs = [mx.gpu(0), mx.gpu(1), mx.gpu(2), mx.gpu(3)]
-
-  # set up logger
-  logger = logging.getLogger()
-  logger.setLevel(logging.INFO)
-
-  batchsize = 200 * len(ctxs)
-  data_shape = (batchsize, 3, 299, 299)
-  label_shape = (batchsize, 2)
-
-  param_prefix = 'MDL_PARAM/params2_proxy_nca_combine/car_reid'
-  param_prefix = 'MDL_PARAM/params2_proxy_nca/car_reid'
-  param_prefix = 'MDL_PARAM/params3_proxy_nca/car_reid'
-  feature_model = create_predict_feature_model(ctxs, [['part1_data', data_shape]], param_prefix, load_paramidx)
-
-#  fdir = '/mnt/ssd2/minzhang/Re-ID_select'
-#  data_query_fn = [fdir+'/cam_each_0.list', fdir+'/cam_each_1.list']
-#  save_folder_fn = [fdir+'/cam_feat_quick_0', fdir+'/cam_feat_quick_1'] 
-
-  fdir = '/mnt/ssd2/minzhang/ReID_BigBenchMark/mingzhang'
-  neednums = [800, 800, 0, 0]
-  data_query_fn = [fdir+'/front_image_list_query.list', 
-                   fdir+'/back_image_list_query.list',
-                   fdir+'/front_image_list_distractor.list',
-                   fdir+'/back_image_list_distractor.list']
-  save_folder_fn = [fdir+'/front_image_query', 
-                    fdir+'/back_image_query',
-                    fdir+'/front_image_distractor',
-                    fdir+'/back_image_distractor'] 
-
-  t0 = time.time()
-  for nn, d1, d2 in zip(neednums, data_query_fn, save_folder_fn):
-    data_query = CarReID_TestQuick_Iter(['part1_data'], [data_shape], ['id'], [label_shape], [d1])
-    do_predict_feature(feature_model, data_query, d2, nn)
-  t1 = time.time()
-  print 'extracted all features costs', t1-t0
- 
-  print 'over...'
-
-  return
-
 
 def create_compare_feature_model(ctxs, provide_data):
   imgnum, featdim = provide_data[1][1]
@@ -283,7 +241,7 @@ def do_compare_feature(predict_model, bsz, query_list, distractor_list, savefold
       cmpfile = open(savefolder+'/cmp=%s=%s.list'%(id1, name1), 'w')
       t0 = time.time()
       for dfn in distractor_list:
-        labels_d, datas_d, paths_d = cPickle.load(open(qfn, 'rb'))
+        labels_d, datas_d, paths_d = cPickle.load(open(dfn, 'rb'))
         nd_data2 = mx.nd.array(datas_d)
         data = mx.io.DataBatch([nd_data1, nd_data2], [])
         predict_model.forward(data)
@@ -305,6 +263,136 @@ def do_compare_feature(predict_model, bsz, query_list, distractor_list, savefold
       print '%s, %d/%d->time cost:%.3f s'%(id1, qi, qlen, (t1-t0))
   pass
 
+
+rank_func = CDLL('./ranker/libranker.so')
+
+def init_ranker_c(database, indexes):
+  dbsize, featdim = database.shape
+  rank_func.init_ranker(database.ctypes.data_as(POINTER(c_float)), indexes.ctypes.data_as(POINTER(c_int)), dbsize, featdim)
+  pass 
+
+
+def do_ranker_c(query, topNIdxes, topNScores):
+  featdim = query.shape[0]
+  topN = topNIdxes.shape[0]
+  topNIdxes[:] = 0
+  topNScores[:] = 0
+  rank_func.do_ranker(query.ctypes.data_as(POINTER(c_float)), featdim, 
+                      topNIdxes.ctypes.data_as(POINTER(c_int)),
+                      topNScores.ctypes.data_as(POINTER(c_float)), topN)
+  pass
+  
+
+def do_compare_feature_c(query_list, distractor_list, savefolder):
+  print 'loading whole distractor set...'
+  dbsize = 0
+  featdim = 0
+  for dfn in distractor_list:
+    labels_d, datas_d, paths_d = cPickle.load(open(dfn, 'rb'))
+    realnum = np.sum(labels_d[:, 0] > -1)
+    dbsize += realnum
+    featdim = datas_d.shape[1]
+  datas_dall = np.zeros((dbsize, featdim), dtype=np.float32)
+  labels_dall = np.zeros((dbsize, 2), dtype=np.int32)
+  print 'data size:%d, feat dim:%d'%(dbsize, featdim)
+  paths_dall = []
+  dbposnow = 0
+  for dfn in distractor_list:
+    labels_d, datas_d, paths_d = cPickle.load(open(dfn, 'rb'))
+    realnum = np.sum(labels_d[:, 0] > -1)
+    datas_dall[dbposnow:dbposnow+realnum] = datas_d[:realnum]
+    labels_dall[dbposnow:dbposnow+realnum] = labels_d[:realnum]
+    paths_dall += paths_d[:realnum]
+    dbposnow += realnum
+  assert(dbposnow==dbsize)
+  indexes = np.asarray(range(dbsize), dtype=np.int32)
+  init_ranker_c(datas_dall, indexes)
+      
+  topN = 20
+  topNIdxs = np.zeros((topN,), dtype=np.int32)
+  topNScores = np.zeros((topN,), dtype=np.float32)
+  print 'quering...' 
+  samenum_q = np.zeros((topN, 2), dtype=np.int32)
+  allnum_q = np.zeros((topN, 2), dtype=np.int32)
+  for qfn in query_list:
+    labels_q, datas_q, paths = cPickle.load(open(qfn, 'rb'))
+    qlen = np.sum(labels_q[:, 0]>-1)
+    t0 = time.time()
+    for qi in xrange(qlen):
+      data1 = datas_q[qi]
+      id1 = labels_q[qi, 0]
+      tp1 = labels_q[qi, 1]
+      do_ranker_c(data1, topNIdxs, topNScores) 
+#      if id1==2293:
+#        print qi+1, topNIdxs, topNScores
+      allid2 = labels_dall[topNIdxs, 0]
+      alltp2 = labels_dall[topNIdxs, 1]
+      for idx in xrange(topN):
+        if tp1==0:
+          if id1 in allid2[:idx+1]:
+            samenum_q[idx, 0] += 1
+          allnum_q[idx, 0] += 1  
+        else:
+          if id1 in allid2[:idx+1]:
+            samenum_q[idx, 1] += 1
+          allnum_q[idx, 1] += 1
+    t1 = time.time()
+    ratios = samenum_q / (allnum_q + 10**-16)
+    needN = np.asarray([0, 1, 2, 3, 4, 9, 14, 19])
+    print 'topN     :', needN+1
+    print 'has plate:', ratios[needN][:, 0].T
+    print 'no  plate:', ratios[needN][:, 1].T
+    print 'time cost:%.3f s'%(t1-t0)
+  
+  pass
+
+def Do_Feature_Test_Fast(load_paramidx):
+  print 'Extracting feature Fast...'
+
+  ctxs = [mx.gpu(0), mx.gpu(1), mx.gpu(2), mx.gpu(3)]
+
+  # set up logger
+  logger = logging.getLogger()
+  logger.setLevel(logging.INFO)
+
+  batchsize = 200 * len(ctxs)
+  data_shape = (batchsize, 3, 299, 299)
+  label_shape = (batchsize, 2)
+
+  param_prefix = 'MDL_PARAM/params2_proxy_nca_combine/car_reid'
+  param_prefix = 'MDL_PARAM/params2_proxy_nca/car_reid'
+  param_prefix = 'MDL_PARAM/params3_proxy_nca/car_reid'
+  feature_model = create_predict_feature_model(ctxs, [['part1_data', data_shape]], param_prefix, load_paramidx)
+
+  fdir = '/mnt/ssd2/minzhang/Re-ID_select'
+#  neednums = [800, 0]
+#  data_query_fn = [fdir+'/cam_each_0.list', fdir+'/cam_each_1.list']
+#  save_folder_fn = [fdir+'/cam_feat_quick_0', fdir+'/cam_feat_quick_1'] 
+
+  fdir = '/mnt/ssd2/minzhang/ReID_BigBenchMark/mingzhang'
+  neednums = [1600, 1600, 0, 0]
+  data_query_fn = [fdir+'/front_image_list_query.list', 
+                   fdir+'/back_image_list_query.list',
+                   fdir+'/front_image_list_distractor.list',
+                   fdir+'/back_image_list_distractor.list']
+  save_folder_fn = [fdir+'/front_image_query', 
+                    fdir+'/back_image_query',
+                    fdir+'/front_image_distractor',
+                    fdir+'/back_image_distractor'] 
+
+  t0 = time.time()
+  for nn, d1, d2 in zip(neednums, data_query_fn, save_folder_fn):
+    data_query = CarReID_TestQuick_Iter(['part1_data'], [data_shape], ['id'], [label_shape], [d1])
+    do_predict_feature(feature_model, data_query, d2, nn)
+  t1 = time.time()
+  print 'extracted all features costs', t1-t0
+ 
+  print 'over...'
+
+  return
+
+
+
 def Do_Feature_Compare_Fast():
   print 'comparing feature...'
   ctxs = [mx.gpu(0)]
@@ -313,17 +401,25 @@ def Do_Feature_Compare_Fast():
   data_shape2 = (bsz, 128) #model2_proxy_nca
   provide_data = [['feature1_data', data_shape1], ['feature2_data', data_shape2]]
  
-  fdir = '/mnt/ssd2/minzhang/Re-ID_select'
-  querylist_fn = [fdir+'/cam_feat_quick_0.list'] 
-  distractorlist_fn = [fdir+'/cam_feat_quick_1.list'] 
+#  fdir = '/mnt/ssd2/minzhang/Re-ID_select'
+#  querylist_fn = [fdir+'/cam_feat_quick_0.list'] 
+#  distractorlist_fn = [fdir+'/cam_feat_quick_1.list'] 
   savefolder = 'Result'
- 
-  compare_model = create_compare_feature_model(ctxs, provide_data)
-  
+
+  fdir = '/mnt/ssd2/minzhang/ReID_BigBenchMark/mingzhang'
+  querylist_fn = [fdir+'/front_image_query.list', 
+                  fdir+'/back_image_query.list'] 
+  distractorlist_fn = [fdir+'/front_image_distractor.list',
+                       fdir+'/back_image_distractor.list']
+
   query_list = dg.get_datalist2(querylist_fn) 
   distractor_list = dg.get_datalist2(distractorlist_fn) 
-  
-  do_compare_feature(compare_model, bsz, query_list, distractor_list, savefolder) 
+ 
+  if 0:
+    compare_model = create_compare_feature_model(ctxs, provide_data)
+    do_compare_feature(compare_model, bsz, query_list, distractor_list, savefolder) 
+  else:
+    do_compare_feature_c(query_list, distractor_list, savefolder) 
 
   pass
 

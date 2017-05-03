@@ -31,7 +31,7 @@ int main(int nArgCnt, char *ppArgs[])
 	int nLen = 128;
 	int nAvgCnt = 100;
 	int nTops = 2;
-	int nGpus = -1;
+	int nGpus = 1;
 	
 	for (int i = 1; i < nArgCnt; ++i)
 	{
@@ -140,3 +140,6 @@ int main(int nArgCnt, char *ppArgs[])
 	std::cout << "YOU SHOULDN'T SEE THIS!" << std::endl;
 	return 0;
 }
+
+
+
