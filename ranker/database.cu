@@ -1014,7 +1014,7 @@ void CDatabase::QueryTopN(const void *pItem, _ITYPE N, DIST *pResults)
 	if (++nQueryies > 100)
 	{
 		double dTime = t.Reset();
-		std::cout << "AvgTime=" << dTime / nQueryies << std::endl;
+//		std::cout << "AvgTime=" << dTime / nQueryies << std::endl;
 		nQueryies = 0;
 	}
 #endif

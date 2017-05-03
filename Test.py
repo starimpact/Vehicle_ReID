@@ -283,7 +283,7 @@ def do_ranker_c(query, topNIdxes, topNScores):
   pass
   
 
-def do_compare_feature_c(query_list, distractor_list, savefolder):
+def do_fill_dataset_c(distractor_list, savefolder=''):
   print 'loading whole distractor set...'
   dbsize = 0
   featdim = 0
@@ -307,11 +307,14 @@ def do_compare_feature_c(query_list, distractor_list, savefolder):
   assert(dbposnow==dbsize)
   indexes = np.asarray(range(dbsize), dtype=np.int32)
   init_ranker_c(datas_dall, indexes)
-      
-  topN = 20
+  
+  return labels_dall 
+
+def do_compare_feature_c(labels_dall, query_list, savefolder=''):
+  print 'quering...', query_list
+  topN = 100+1
   topNIdxs = np.zeros((topN,), dtype=np.int32)
   topNScores = np.zeros((topN,), dtype=np.float32)
-  print 'quering...' 
   samenum_q = np.zeros((topN, 2), dtype=np.int32)
   allnum_q = np.zeros((topN, 2), dtype=np.int32)
   for qfn in query_list:
@@ -337,12 +340,12 @@ def do_compare_feature_c(query_list, distractor_list, savefolder):
             samenum_q[idx, 1] += 1
           allnum_q[idx, 1] += 1
     t1 = time.time()
-    ratios = samenum_q / (allnum_q + 10**-16)
-    needN = np.asarray([0, 1, 2, 3, 4, 9, 14, 19])
-    print 'topN     :', needN+1
-    print 'has plate:', ratios[needN][:, 0].T
-    print 'no  plate:', ratios[needN][:, 1].T
-    print 'time cost:%.3f s'%(t1-t0)
+  ratios = samenum_q / (allnum_q + 10**-16)
+  needN = np.asarray(range(0, topN, 10))
+  print 'topN     :', needN+1
+  print 'has plate:', ratios[needN][:, 0].T, 'num:%d'%allnum_q[0, 0]
+  print 'no  plate:', ratios[needN][:, 1].T, 'num:%d'%allnum_q[0, 1]
+  print 'time cost:%.3f s'%(t1-t0)
   
   pass
 
@@ -412,14 +415,19 @@ def Do_Feature_Compare_Fast():
   distractorlist_fn = [fdir+'/front_image_distractor.list',
                        fdir+'/back_image_distractor.list']
 
-  query_list = dg.get_datalist2(querylist_fn) 
+  query_lists = []
+  for qfn in querylist_fn:
+    query_list_one = dg.get_datalist2([qfn]) 
+    query_lists.append(query_list_one)
   distractor_list = dg.get_datalist2(distractorlist_fn) 
  
   if 0:
     compare_model = create_compare_feature_model(ctxs, provide_data)
     do_compare_feature(compare_model, bsz, query_list, distractor_list, savefolder) 
   else:
-    do_compare_feature_c(query_list, distractor_list, savefolder) 
+    labels_dall = do_fill_dataset_c(distractor_list)
+    for qlist in query_lists:
+      do_compare_feature_c(labels_dall, qlist) 
 
   pass
 
@@ -431,7 +439,7 @@ if __name__=='__main__':
 #  Do_Feature_Test(restore_whichone, ctx)
 #  Do_Compare_Test(restore_whichone, ctx)
 #############
-  if 1:
+  if 0:
     Do_Feature_Test_Fast(restore_whichone)
   else:
     Do_Feature_Compare_Fast()
