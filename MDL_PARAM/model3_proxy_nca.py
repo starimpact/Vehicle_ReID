@@ -608,7 +608,7 @@ def CreateModel_Color_Split_test():
    if True:
      feature_norm = mx.sym.sqrt(mx.sym.sum_axis(reid_feature**2, axis=1))
      feature_norm = mx.sym.Reshape(feature_norm, shape=(-2, 1))
-     reid_feature = mx.sym.broadcast_div(reid_feature, feature_norm) * 4
+     reid_feature = mx.sym.broadcast_div(reid_feature, feature_norm) * 40
 
    feature1 = mx.sym.Variable('feature1_data')
    feature2 = mx.sym.Variable('feature2_data')

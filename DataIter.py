@@ -104,6 +104,7 @@ class CarReID_TestQuick_Iter(mx.io.DataIter):
     self.datalist = dg.get_datalist2(datafn_list)
     self.datalen = len(self.datalist)
     self.num_batches = self.datalen / label_shapes[0][0]
+    self.batch_size = label_shapes[0][0]
     if self.datalen%label_shapes[0][0]!=0:
       self.num_batches += 1
     self.datas_batch = {}

@@ -4,6 +4,7 @@ import mxnet as mx
 import cPickle
 import time
  
+import DataGenerator as dg
 from DataIter import CarReID_Iter, CarReID_Test_Iter, CarReID_Feat_Query_Iter, CarReID_Feat_Iter, CarReID_Softmax_Iter
 from DataIter import CarReID_TestQuick_Iter
 from Solver import CarReID_Solver
@@ -196,20 +197,22 @@ def create_predict_feature_model(ctxs, provide_data, param_prefix, load_paramidx
   return reid_model
 
 
-def do_predict_feature(predict_model, data_iter, savefolder):
+def do_predict_feature(predict_model, data_iter, savefolder, nn):
   data_iter.reset()
+  needbnum = int(np.ceil(nn*1.0/data_iter.batch_size))
   for data in data_iter:
-    print 'feature extracting...%.2f%%(%d/%d), to %s'%(data_iter.cur_batch*100.0/data_iter.num_batches, data_iter.cur_batch, data_iter.num_batches, savefolder)
+    print 'feature extracting...%.2f%%(%d/%d, %d), to %s'%(data_iter.cur_batch*100.0/data_iter.num_batches, data_iter.cur_batch, data_iter.num_batches, needbnum, savefolder)
     predict_model.forward(data)
     feats = predict_model.get_outputs()[0].asnumpy()
     labels = data.label[0].asnumpy()
     cPickle.dump([labels, feats, data_iter.paths], open('%s/%d.feat'%(savefolder, data_iter.cur_batch), 'wb'))
+    if needbnum>0 and data_iter.cur_batch>=needbnum:
+      break
   pass
 
 
 def Do_Feature_Test_Fast(load_paramidx):
   print 'Extracting feature Fast...'
-
 
   ctxs = [mx.gpu(0), mx.gpu(1), mx.gpu(2), mx.gpu(3)]
 
@@ -226,25 +229,25 @@ def Do_Feature_Test_Fast(load_paramidx):
   param_prefix = 'MDL_PARAM/params3_proxy_nca/car_reid'
   feature_model = create_predict_feature_model(ctxs, [['part1_data', data_shape]], param_prefix, load_paramidx)
 
-  fdir = '/mnt/ssd2/minzhang/Re-ID_select'
-  data_query_fn = [fdir+'/cam_each_0.list', fdir+'/cam_each_1.list']
-  save_folder_fn = [fdir+'/cam_feat_quick_0', fdir+'/cam_feat_quick_1'] 
+#  fdir = '/mnt/ssd2/minzhang/Re-ID_select'
+#  data_query_fn = [fdir+'/cam_each_0.list', fdir+'/cam_each_1.list']
+#  save_folder_fn = [fdir+'/cam_feat_quick_0', fdir+'/cam_feat_quick_1'] 
 
-#  fdir = '/mnt/ssd2/minzhang/ReID_BigBenchMark/mingzhang'
-#  data_query_fn = [fdir+'/front_image_list_query.list', 
-#                   fdir+'/back_image_list_query.list',
-#                   fdir+'/front_image_list_distractor.list',
-#                   fdir+'/back_image_list_distractor.list']
-#  save_folder_fn = [fdir+'/front_image_query', 
-#                    fdir+'/back_image_query',
-#                    fdir+'/front_image_distractor',
-#                    fdir+'/back_image_distractor'] 
+  fdir = '/mnt/ssd2/minzhang/ReID_BigBenchMark/mingzhang'
+  neednums = [800, 800, 0, 0]
+  data_query_fn = [fdir+'/front_image_list_query.list', 
+                   fdir+'/back_image_list_query.list',
+                   fdir+'/front_image_list_distractor.list',
+                   fdir+'/back_image_list_distractor.list']
+  save_folder_fn = [fdir+'/front_image_query', 
+                    fdir+'/back_image_query',
+                    fdir+'/front_image_distractor',
+                    fdir+'/back_image_distractor'] 
 
   t0 = time.time()
-  for d1, d2 in zip(data_query_fn, save_folder_fn):
+  for nn, d1, d2 in zip(neednums, data_query_fn, save_folder_fn):
     data_query = CarReID_TestQuick_Iter(['part1_data'], [data_shape], ['id'], [label_shape], [d1])
-    do_predict_feature(feature_model, data_query, d2)
-    exit()
+    do_predict_feature(feature_model, data_query, d2, nn)
   t1 = time.time()
   print 'extracted all features costs', t1-t0
  
@@ -253,6 +256,76 @@ def Do_Feature_Test_Fast(load_paramidx):
   return
 
 
+def create_compare_feature_model(ctxs, provide_data):
+  imgnum, featdim = provide_data[1][1]
+  _, reid_feature_net = now_model.CreateModel_Color_Split_test()
+  data_names = []
+  for dn in provide_data:
+    data_names.append(dn[0])
+  reid_model = mx.mod.Module(context=ctxs, symbol=reid_feature_net, data_names=data_names)
+  reid_model.bind(data_shapes=provide_data, for_training=False)
+  reid_model.init_params()
+  return reid_model
+
+
+def do_compare_feature(predict_model, bsz, query_list, distractor_list, savefolder):
+  for qfn in query_list:
+    labels_q, datas_q, paths = cPickle.load(open(qfn, 'rb'))
+    qlen = np.sum(labels_q[:, 0]>-1)
+    for qi in xrange(qlen):
+      data1 = datas_q[qi:qi+1]
+      rep_data1 = data1.repeat(bsz, axis=0)
+      nd_data1 = mx.nd.array(rep_data1)
+      id1 = str(labels_q[qi, 0])
+      type1 = labels_q[qi, 1]
+      path1 = paths[qi]
+      name1 = path1.split('/')[-1]
+      cmpfile = open(savefolder+'/cmp=%s=%s.list'%(id1, name1), 'w')
+      t0 = time.time()
+      for dfn in distractor_list:
+        labels_d, datas_d, paths_d = cPickle.load(open(qfn, 'rb'))
+        nd_data2 = mx.nd.array(datas_d)
+        data = mx.io.DataBatch([nd_data1, nd_data2], [])
+        predict_model.forward(data)
+        cmp_scores = predict_model.get_outputs()[0].asnumpy()
+        cmp_scores = np.sum(cmp_scores, axis=1)
+        dlen = np.sum(labels_d[:, 0]>-1)
+        
+        writestrs = ''
+        for bi in xrange(dlen):
+          id2 = labels_d[bi, 0]
+          path2 = paths_d[bi]
+          name2 = path2.split('/')[-1]
+          cmp_score = cmp_scores[bi]
+          writestrs += '%s,%s,%f\n'%(id2, name2, cmp_score)
+        cmpfile.write(writestrs)
+        cmpfile.flush()
+      cmpfile.close()
+      t1 = time.time()
+      print '%s, %d/%d->time cost:%.3f s'%(id1, qi, qlen, (t1-t0))
+  pass
+
+def Do_Feature_Compare_Fast():
+  print 'comparing feature...'
+  ctxs = [mx.gpu(0)]
+  bsz = 800
+  data_shape1 = (bsz, 128) #model2_proxy_nca
+  data_shape2 = (bsz, 128) #model2_proxy_nca
+  provide_data = [['feature1_data', data_shape1], ['feature2_data', data_shape2]]
+ 
+  fdir = '/mnt/ssd2/minzhang/Re-ID_select'
+  querylist_fn = [fdir+'/cam_feat_quick_0.list'] 
+  distractorlist_fn = [fdir+'/cam_feat_quick_1.list'] 
+  savefolder = 'Result'
+ 
+  compare_model = create_compare_feature_model(ctxs, provide_data)
+  
+  query_list = dg.get_datalist2(querylist_fn) 
+  distractor_list = dg.get_datalist2(distractorlist_fn) 
+  
+  do_compare_feature(compare_model, bsz, query_list, distractor_list, savefolder) 
+
+  pass
 
 if __name__=='__main__':
 #  Do_Test()
@@ -261,6 +334,10 @@ if __name__=='__main__':
 #  Do_Softmax_Test_Acc(ctx, restore_whichone)
 #  Do_Feature_Test(restore_whichone, ctx)
 #  Do_Compare_Test(restore_whichone, ctx)
-  Do_Feature_Test_Fast(restore_whichone)
+#############
+  if 1:
+    Do_Feature_Test_Fast(restore_whichone)
+  else:
+    Do_Feature_Compare_Fast()
 
 
