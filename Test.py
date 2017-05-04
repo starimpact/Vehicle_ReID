@@ -308,16 +308,18 @@ def do_fill_dataset_c(distractor_list, savefolder=''):
   indexes = np.asarray(range(dbsize), dtype=np.int32)
   init_ranker_c(datas_dall, indexes)
   
-  return labels_dall 
+  return labels_dall, paths_dall 
 
-def do_compare_feature_c(labels_dall, query_list, savefolder=''):
-  print 'quering...', query_list
+def do_compare_feature_c(labels_dall, paths_dall, query_list, qtype='', savefolder=''):
+  print 'quering...'
+  qcars_list = []
   topN = 100+1
   topNIdxs = np.zeros((topN,), dtype=np.int32)
   topNScores = np.zeros((topN,), dtype=np.float32)
   samenum_q = np.zeros((topN, 2), dtype=np.int32)
   allnum_q = np.zeros((topN, 2), dtype=np.int32)
   for qfn in query_list:
+    print qfn
     labels_q, datas_q, paths = cPickle.load(open(qfn, 'rb'))
     qlen = np.sum(labels_q[:, 0]>-1)
     t0 = time.time()
@@ -325,12 +327,21 @@ def do_compare_feature_c(labels_dall, query_list, savefolder=''):
       data1 = datas_q[qi]
       id1 = labels_q[qi, 0]
       tp1 = labels_q[qi, 1]
+      qcarinfo = {}
+      qcarinfo['id'] = id1
+      qcarinfo['path'] = paths[qi]
       do_ranker_c(data1, topNIdxs, topNScores) 
 #      if id1==2293:
 #        print qi+1, topNIdxs, topNScores
       allid2 = labels_dall[topNIdxs, 0]
       alltp2 = labels_dall[topNIdxs, 1]
+      carlist = []
       for idx in xrange(topN):
+        car = {}
+        car['id'] = allid2[idx]
+        car['path'] = paths_dall[topNIdxs[idx]]
+        car['score'] = topNScores[idx]
+        carlist.append(car)
         if tp1==0:
           if id1 in allid2[:idx+1]:
             samenum_q[idx, 0] += 1
@@ -339,7 +350,12 @@ def do_compare_feature_c(labels_dall, query_list, savefolder=''):
           if id1 in allid2[:idx+1]:
             samenum_q[idx, 1] += 1
           allnum_q[idx, 1] += 1
+      qcarinfo['data'] = carlist
+      qcars_list.append(qcarinfo)
     t1 = time.time()
+  topName = 'topN_%s.bin'%(qtype)
+  cPickle.dump(qcars_list, open(topName, 'wb'))
+  print 'saved topN into', topName
   ratios = samenum_q / (allnum_q + 10**-16)
   needN = np.asarray(range(0, topN, 10))
   print 'topN     :', needN+1
@@ -414,6 +430,7 @@ def Do_Feature_Compare_Fast():
                   fdir+'/back_image_query.list'] 
   distractorlist_fn = [fdir+'/front_image_distractor.list',
                        fdir+'/back_image_distractor.list']
+  qtypes = ['front', 'back']
 
   query_lists = []
   for qfn in querylist_fn:
@@ -425,9 +442,9 @@ def Do_Feature_Compare_Fast():
     compare_model = create_compare_feature_model(ctxs, provide_data)
     do_compare_feature(compare_model, bsz, query_list, distractor_list, savefolder) 
   else:
-    labels_dall = do_fill_dataset_c(distractor_list)
-    for qlist in query_lists:
-      do_compare_feature_c(labels_dall, qlist) 
+    labels_dall, paths_dall = do_fill_dataset_c(distractor_list)
+    for qtype, qlist in zip(qtypes, query_lists):
+      do_compare_feature_c(labels_dall, paths_dall, qlist, qtype) 
 
   pass
 
