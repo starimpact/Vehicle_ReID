@@ -318,6 +318,13 @@ def do_compare_feature_c(labels_dall, paths_dall, query_list, qtype='', savefold
   topNScores = np.zeros((topN,), dtype=np.float32)
   samenum_q = np.zeros((topN, 2), dtype=np.int32)
   allnum_q = np.zeros((topN, 2), dtype=np.int32)
+  idall_list = labels_dall[:, 0].tolist()
+  idall_dict = {}
+  for tmp0, tmp1 in zip(idall_list, range(len(idall_list))):
+    if idall_dict.has_key(tmp0):
+      idall_dict[tmp0] += [tmp1]
+    else:
+      idall_dict[tmp0] = [tmp1]
   for qfn in query_list:
     print qfn
     labels_q, datas_q, paths = cPickle.load(open(qfn, 'rb'))
@@ -335,6 +342,10 @@ def do_compare_feature_c(labels_dall, paths_dall, query_list, qtype='', savefold
 #        print qi+1, topNIdxs, topNScores
       allid2 = labels_dall[topNIdxs, 0]
       alltp2 = labels_dall[topNIdxs, 1]
+      qcarinfo['gpath'] = []
+      for idxtmp in idall_dict[id1]:
+        groundpath = paths_dall[idxtmp]
+        qcarinfo['gpath'] += [groundpath]
       carlist = []
       for idx in xrange(topN):
         car = {}
@@ -389,15 +400,17 @@ def Do_Feature_Test_Fast(load_paramidx):
 #  save_folder_fn = [fdir+'/cam_feat_quick_0', fdir+'/cam_feat_quick_1'] 
 
   fdir = '/mnt/ssd2/minzhang/ReID_BigBenchMark/mingzhang'
-  neednums = [1600, 1600, 0, 0]
+  neednums = [3200, 3200, 0, 0]
   data_query_fn = [fdir+'/front_image_list_query.list', 
                    fdir+'/back_image_list_query.list',
-                   fdir+'/front_image_list_distractor.list',
-                   fdir+'/back_image_list_distractor.list']
+#                   fdir+'/front_image_list_distractor.list',
+#                   fdir+'/back_image_list_distractor.list'
+                  ]
   save_folder_fn = [fdir+'/front_image_query', 
                     fdir+'/back_image_query',
-                    fdir+'/front_image_distractor',
-                    fdir+'/back_image_distractor'] 
+#                    fdir+'/front_image_distractor',
+#                    fdir+'/back_image_distractor'
+                   ] 
 
   t0 = time.time()
   for nn, d1, d2 in zip(neednums, data_query_fn, save_folder_fn):
