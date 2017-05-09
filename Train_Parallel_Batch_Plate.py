@@ -236,6 +236,7 @@ def Do_Proxy_NCA_Train3():
   
 
 #  ctxs = [mx.gpu(0), mx.gpu(1), mx.gpu(2), mx.gpu(3), mx.gpu(4), mx.gpu(5), mx.gpu(6), mx.gpu(7)]
+#  ctxs = [mx.gpu(0), mx.gpu(1), mx.gpu(2), mx.gpu(3)]
   ctxs = [mx.gpu(0), mx.gpu(1), mx.gpu(2), mx.gpu(3)]
 #  ctxs = [mx.gpu(2), mx.gpu(1), mx.gpu(3)]
 #  ctxs = [mx.gpu(0), mx.gpu(1)]
@@ -264,12 +265,13 @@ def Do_Proxy_NCA_Train3():
   label_shape = dict(zip(['proxy_yM', 'proxy_ZM'], [proxy_yM_shape, proxy_ZM_shape]))
   proxyfn = 'proxy.bin'
 #  datapath = '/home/mingzhang/data/ReID_origin/mingzhang/'
-#  datapath = '/home/mingzhang/data/ReID_origin/mingzhang2/'
+  datapath = '/home/mingzhang/data/ReID_origin/mingzhang2/'
 #  datapath = '/mnt/ssd2/minzhang/ReID_origin/mingzhang/'
-  datapath = '/mnt/ssd2/minzhang/ReID_origin/mingzhang2/'
+#  datapath = '/mnt/ssd2/minzhang/ReID_origin/mingzhang2/'
 
-  datafn_list = ['front_plate_image_list_train.list', 'back_plate_image_list_train.list'] #261708 calss number.
+#  datafn_list = ['front_plate_image_list_train.list', 'back_plate_image_list_train.list'] #261708 calss number.
 #  datafn_list = ['data_each_part6.list', 'data_each_part7.list'] #142149 calss number.
+  datafn_list = ['front_plate_image_list_train.list'] #261708 calss number.
 
   for di in xrange(len(datafn_list)):
     datafn_list[di] = datapath + datafn_list[di]

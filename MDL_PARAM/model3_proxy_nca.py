@@ -473,7 +473,7 @@ def create_reid4_net(batch_size, proxy_num):
 #  norm_value = (84**0.5)/2
 #  norm_value = np.log(2.0**128)/4
   useSquare = True
-  useHing = True
+  useHing = False
   print 'useSquare:', useSquare, ', useHing:', useHing
   if useSquare:
     norm_value = np.log((2.0**128)/proxy_num)/2 #2.0**128 is the maxinum value of float32

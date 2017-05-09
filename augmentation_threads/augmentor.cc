@@ -407,8 +407,8 @@ void do_augment_plate_onethread(void *p)
   //  int rnd0 = rand();
   //  if (rnd0 < (RAND_MAX / 4) * 3)
     {
-  //    rnd_mask(img);
-      rnd_block_mask(img);
+      rnd_mask(img);
+  //    rnd_block_mask(img);
     }
     
     //crop
