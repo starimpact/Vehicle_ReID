@@ -103,7 +103,7 @@ def Do_Proxy_NCA_Train():
   ctx = mx.gpu(3)
   
   num_epoch = 10000
-  batch_size = 1
+  batch_size = 16
   featdim = 128
   proxy_num = 500#43928
   clsnum = proxy_num

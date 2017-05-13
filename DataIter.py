@@ -285,8 +285,8 @@ class CarReID_Proxy_Mxnet_Iter(mx.io.DataIter):
     super(CarReID_Proxy_Mxnet_Iter, self).__init__()
 
     self.batch_size = data_shapes[0][0]
-    self._provide_data = zip(data_names, data_shapes)
-    self._provide_label = zip(label_names, label_shapes)
+    self._provide_data = zip(data_names+label_names, data_shapes+label_shapes)
+    self._provide_label = None#zip(label_names, label_shapes)
     self.datas_batch = {} 
     self.datas_batch['data'] = mx.nd.zeros(data_shapes[0], dtype=np.float32)
     self.datas_batch['databuffer'] = np.zeros(data_shapes[0], dtype=np.float32)
@@ -297,9 +297,9 @@ class CarReID_Proxy_Mxnet_Iter(mx.io.DataIter):
 #    self.datas_labels = self.data_label_gen(self._provide_data, self._provide_label) 
     self.datalist = dg.get_datalist(datafn)
     self.datalen = len(self.datalist)
-    self.rndidx_list = range(self.datalen)#np.random.permutation(self.datalen)
+    self.rndidx_list = np.random.permutation(self.datalen)
     self.num_batches = self.datalen / label_shapes[0][0]
-    self.labeldict = dict(self._provide_label)
+    self.labeldict = None#dict(self._provide_label)
     self.default_bucket_key = bucket_key
 
   def __iter__(self):
@@ -307,7 +307,7 @@ class CarReID_Proxy_Mxnet_Iter(mx.io.DataIter):
 
   def reset(self):
     self.cur_batch = 0        
-#    self.rndidx_list = np.random.permutation(self.datalen)
+    self.rndidx_list = np.random.permutation(self.datalen)
 
   def __next__(self):
     return self.next()
@@ -321,7 +321,7 @@ class CarReID_Proxy_Mxnet_Iter(mx.io.DataIter):
     return self._provide_label
 
   def next(self):
-    if self.cur_batch < 1:#self.num_batches:
+    if self.cur_batch < self.num_batches:
 #      datas, labels = dg.get_data_label_proxy_mxnet(self._provide_data, self._provide_label, self.datalist, self.rndidx_list, self.cur_batch) 
       datas, labels = dg.get_data_label_proxy_mxnet_threads(self._provide_data, self.datas_batch, self._provide_label, self.labels_batch, self.datalist, self.rndidx_list, self.cur_batch) 
       self.cur_batch += 1

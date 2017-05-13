@@ -585,8 +585,8 @@ def get_data_label_proxy_mxnet_threads(data_infos, datas, label_infos, labels, d
                    rndcrop=True, rndcont=False, rndnoise=False, rndrotate=True,
                    rndhflip=True, normalize=True):
 #  print label_infos
-  labelshape = label_infos[0][1]
-  batchsize = labelshape[0]
+  datashape = data_infos[0][1]
+  batchsize = datashape[0]
   if (batch_now+1)*batchsize > len(datalist):
     return None
   
@@ -633,7 +633,7 @@ def get_data_label_proxy_mxnet_threads(data_infos, datas, label_infos, labels, d
     labels['proxy_ZM'][si, carid] = 0
   datas_nd = [datas['data']]
   label_nd = [labels['proxy_yM'], labels['proxy_ZM']]
-  return datas_nd, label_nd
+  return datas_nd + label_nd, None
 
 
 

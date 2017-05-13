@@ -128,25 +128,25 @@ void do_augment_onethread(void *p)
  
 //  printf("%s\n", strfn.c_str()); 
   //mask rows
-//  int rnd0 = rand();
-//  if (rnd0 < (RAND_MAX / 4) * 3)
+  int rnd0 = rand();
+  if (rnd0 < (RAND_MAX / 4) * 3)
   {
-//    rnd_mask(img);
+    rnd_mask(img);
   }
   
   //crop
-//  rnd_crop(img);
+  rnd_crop(img);
   //reisze
   cv::resize(img, img, cv::Size(stdW, stdH));
   //normalize
   normalize_img(img);
   //rotate
-//  rnd_rotate(img);
+  rnd_rotate(img);
   //flip
   int rnd = rand();
   if (rnd < RAND_MAX / 2)
   {
-//    cv::flip(img, img, 1);
+    cv::flip(img, img, 1);
   }
 //  img.copyTo(matOut);
   float *pfImg = (float*)img.data;
