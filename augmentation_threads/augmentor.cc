@@ -92,6 +92,7 @@ extern "C" int do_augment_threads(char *pfns[], int num,
 int rnd_crop(cv::Mat &matIn);
 int rnd_rotate(cv::Mat &matIn);
 int normalize_img(cv::Mat &matIn);
+int rnd_mask(cv::Mat &matIn);
 
 void do_augment_onethread(void *p)
 {
@@ -126,19 +127,26 @@ void do_augment_onethread(void *p)
   }
  
 //  printf("%s\n", strfn.c_str()); 
+  //mask rows
+//  int rnd0 = rand();
+//  if (rnd0 < (RAND_MAX / 4) * 3)
+  {
+//    rnd_mask(img);
+  }
+  
   //crop
-  rnd_crop(img);
+//  rnd_crop(img);
   //reisze
   cv::resize(img, img, cv::Size(stdW, stdH));
   //normalize
   normalize_img(img);
   //rotate
-  rnd_rotate(img);
+//  rnd_rotate(img);
   //flip
   int rnd = rand();
   if (rnd < RAND_MAX / 2)
   {
-    cv::flip(img, img, 1);
+//    cv::flip(img, img, 1);
   }
 //  img.copyTo(matOut);
   float *pfImg = (float*)img.data;
@@ -226,6 +234,30 @@ int normalize_img(cv::Mat &matIn)
 
   return 0;
 }
+
+
+int rnd_mask(cv::Mat &matIn)
+{
+  assert(matIn.type()==CV_8UC3);
+  int dwH = matIn.rows;
+  int dwW = matIn.cols;
+  
+  int rndH = (int)randMToN(dwH/8, dwH/4);
+  int rndRI = (int)randMToN(0, dwH-1);
+  if (rndH + rndRI >= dwH)
+  {
+    rndRI = dwH - rndH - 1;
+  }
+  
+  memset(matIn.data + rndRI * dwW * 3, 0, rndH * dwW * 3);
+
+  return 0;
+}
+
+
+
+
+
 
 
 

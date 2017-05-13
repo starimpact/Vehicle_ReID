@@ -183,14 +183,14 @@ class CarReID_Proxy_Solver(object):
     self.optimizer = None
     self.updater = None
     self.kwargs = kwargs.copy()
-    self.initializer=mx.init.Xavier()
+    self.initializer=mx.init.Normal()
 
   def init_args(self, args):
     for key in args:
       arr = args[key]
       if key.endswith('_weight'):
-#        self.initializer(mx.init.InitDesc(key), arr) 
-        self.initializer(key, arr) 
+        self.initializer(mx.init.InitDesc(key), arr) 
+#        self.initializer(key, arr) 
       if key.endswith('_bias'):
         arr[:] = 0.0
       if key.endswith('_gamma'):
@@ -210,14 +210,19 @@ class CarReID_Proxy_Solver(object):
 
     self.arg_params = {}
     self.update_params = {}
+    self.grad_req = {}
     for name, shape in zip(arg_names, arg_shapes):
 #      print name, shape
       self.arg_params[name] = mx.nd.zeros(shape, self.ctx)
       if name.endswith('weight') or name.endswith('bias') or \
-          name.endswith('gamma') or name.endswith('beta') or \
-          name=='proxy_Z':
+          name.endswith('gamma') or name.endswith('beta'):
 #        print name
         self.update_params[name] = self.arg_params[name]
+        self.grad_req[name] = 'write'
+      elif name=='proxy_yM':# or name=='proxy_yM':
+        self.grad_req[name] = 'write'
+      else:
+        self.grad_req[name] = 'null'
 
     self.init_args(self.arg_params)
 
@@ -235,8 +240,10 @@ class CarReID_Proxy_Solver(object):
     loadfunc = mx.model.load_checkpoint
     _, update_params, aux_params = loadfunc(self.prefix, whichone)
     for name in self.update_params:
+#      print name, update_params[name].asnumpy().mean()
       self.arg_params[name][:] = update_params[name]
     for name in self.aux_params:
+#      print name, aux_params[name].asnumpy().mean()
       self.aux_params[name][:] = aux_params[name]
 #    name = 'PART2_COV_5_bn_moving_mean'
 #    print name, aux_params[name].asnumpy()
@@ -253,16 +260,17 @@ class CarReID_Proxy_Solver(object):
     self.get_params(grad_req)
     if whichone is not None:
       self.set_params(whichone)
-    else:
-      import DataGenerator as dg
-      proxyfn = 'proxy.bin'
-      proxy_set = dg.get_proxyset(proxyfn, self.arg_params['proxy_Z'].shape)
-      self.arg_params['proxy_Z'][:] = mx.nd.array(proxy_set, self.ctx)
+#    else:
+#      import DataGenerator as dg
+#      proxyfn = 'proxy.bin'
+#      proxy_set = dg.get_proxyset(proxyfn, self.arg_params['proxy_Z'].shape)
+#      self.arg_params['proxy_Z'][:] = mx.nd.array(proxy_set, self.ctx)
+    print self.arg_params['proxy_Z_weight'].asnumpy()[0]
 
     self.optimizer = mx.optimizer.create(self.opt_method, rescale_grad=(1.0 / self.batchsize), **self.kwargs)
     self.updater = mx.optimizer.get_updater(self.optimizer)
     self.executor = self.symbol.bind(self.ctx, self.arg_params, args_grad=self.grad_params,
-                                     grad_req=grad_req, aux_states=self.aux_params)
+                                     grad_req=self.grad_req, aux_states=self.aux_params)
     update_dict = self.update_params
 #    epoch_end_callback = mx.callback.do_checkpoint(self.prefix)
  
@@ -275,13 +283,38 @@ class CarReID_Proxy_Solver(object):
       for databatch in train_data:
         nbatch += 1
         for ks, v in zip(train_data.provide_data, databatch.data):
+          vnp = v.asnumpy()
+ #         print vnp.shape, vnp[-1, 0]
+          print "data:", np.abs(vnp).mean()
           k = ks[0]
           self.arg_params[k][:] = v
         for ks, v in zip(train_data.provide_label, databatch.label):
           k = ks[0]
           self.arg_params[k][:] = v
         output_dict = {name: nd for name, nd in zip(self.symbol.list_outputs(), self.executor.outputs)}
+#        print output_dict
+        tmpsum = 0
+        for key in self.executor.arg_dict:
+          tmpsum += self.executor.arg_dict[key].asnumpy().mean()
+        print 'all arg sum:', tmpsum
+        tmpsum = 0
+        for key in self.executor.aux_dict:
+          tmpsum += self.executor.aux_dict[key].asnumpy().mean()
+        print 'all aux sum:', tmpsum
+        tmpsum = 0
+        for key in self.executor.grad_dict:
+          tmpsum += self.executor.grad_dict[key].asnumpy().mean()
+        print 'all grad sum:', tmpsum
         self.executor.forward(is_train=True)
+        tmpsum = 0
+        for key in self.executor.arg_dict:
+          tmpsum += self.executor.arg_dict[key].asnumpy().mean()
+        print '_all arg sum:', tmpsum
+        tmpsum = 0
+        for key in self.executor.aux_dict:
+          tmpsum += self.executor.aux_dict[key].asnumpy().mean()
+        print '_all aux sum:', tmpsum
+        print self.executor.outputs[0].asnumpy()
         self.executor.backward()
 
         for key in update_dict:
@@ -297,7 +330,11 @@ class CarReID_Proxy_Solver(object):
             self.bigbatch_grads[key][:] = 0
 
         outval = output_dict['proxy_nca_loss_output'].asnumpy()
+        print 'z:', np.abs(self.arg_params['proxy_Z_weight'].asnumpy()).mean()
+        print 'fc1:', np.abs(self.arg_params['part1_fc1_weight'].asnumpy()).mean()
 #        print np.mean(outval)
+#        print outval
+#        raise ValueError("show data...")
 
         cost.append(np.mean(outval))
         lrsch = self.optimizer.lr_scheduler
@@ -417,12 +454,12 @@ class CarReID_Softmax_Solver(object):
       num_batches = train_data.num_batches
       for databatch in train_data:
         nbatch += 1
-        for k, v in databatch.data.items():
+#        for k, v in databatch.data.items():
 #          print k, v.shape
-          self.arg_params[k][:] = mx.nd.array(v, self.ctx)
-        for k, v in databatch.label.items():
+        self.arg_params['data'][:] = databatch.data[0]
+#        for k, v in databatch.label.items():
 #          print k, v
-          self.arg_params[k][:] = mx.nd.array(v, self.ctx)
+        self.arg_params['label'][:] = databatch.label[0]
         output_dict = {name: nd for name, nd in zip(self.symbol.list_outputs(), self.executor.outputs)}
         self.executor.forward(is_train=True)
         self.executor.backward()
@@ -441,7 +478,7 @@ class CarReID_Softmax_Solver(object):
             self.bigbatch_grads[key][:] = 0
 
         outval = output_dict['cls_output'].asnumpy()
-        label = databatch.label['label']
+        label = databatch.label[0].asnumpy()
         cls_predict = np.argmax(outval, axis=1)
         accone = np.mean(cls_predict!=label)
         accus.append(accone)

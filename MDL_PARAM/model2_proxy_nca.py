@@ -237,7 +237,9 @@ def create_reid_net(batch_size, proxy_num):
 
   data0 = mx.sym.Variable('data')
   proxy_yM = mx.sym.Variable('proxy_yM')
-  proxy_Z = mx.sym.Variable('proxy_Z')
+#  proxy_Z = mx.sym.Variable('proxy_Z_weight')
+  proxy_Z = mx.sym.Variable(name='proxy_Z_weight', 
+                       shape=(proxy_num, 128), dtype=np.float32)
   proxy_ZM = mx.sym.Variable('proxy_ZM')
   args_all = None
   reid_feature, args_all = create_inception_resnet_v2(data0, namepre='part1', args=args_all)
@@ -457,7 +459,7 @@ def create_reid4_net(batch_size, proxy_num):
   data0 = mx.sym.Variable('data')
   proxy_yM = mx.sym.Variable('proxy_yM')
   proxy_Z = mx.sym.Variable(name='proxy_Z_weight', 
-                       shape=(proxy_num, 128))
+                       shape=(proxy_num, 128), dtype=np.float32)
   proxy_ZM = mx.sym.Variable('proxy_ZM')
   args_all = None
   reid_feature, args_all = create_inception_resnet_v2(data0, namepre='part1', args=args_all)

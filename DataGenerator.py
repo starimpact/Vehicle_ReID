@@ -322,12 +322,15 @@ def get_data_label(data_infos, label_infos, datalist, data_rndidx, batch_now,
       imgsave = (stdson*255).astype(np.uint8)
       cv2.imwrite('tmpimg/stdson%d.jpg'%(int(carid)), imgsave)
 
+  datas = [mx.nd.array(datas['data'])]
+  labels = [mx.nd.array(labels['label'])]
+
   return datas, labels
 
 
 def get_data_label_proxy(data_infos, label_infos, datalist, data_rndidx, proxyset, batch_now, 
-                   rndcrop=True, rndcont=False, rndnoise=False, rndrotate=True,
-                   rndhflip=True, normalize=True):
+                   rndcrop=False, rndcont=False, rndnoise=False, rndrotate=False,
+                   rndhflip=False, normalize=True):
 #  print label_infos
   labelshape = label_infos[0][1]
   batchsize = labelshape[0]
@@ -339,6 +342,7 @@ def get_data_label_proxy(data_infos, label_infos, datalist, data_rndidx, proxyse
     data_batch.append(datalist[idx])
   cars = []
   for onedata in data_batch:
+#    print onedata
     onecar = {}
     parts = onedata.split(',')
     onecar['path'] = parts[0]
@@ -594,6 +598,7 @@ def get_data_label_proxy_mxnet_threads(data_infos, datas, label_infos, labels, d
     onecar = {}
     parts = onedata.split(',')
     onecar['path'] = parts[0]
+#    print onedata 
     onecar['id'] = parts[0].split('/')[-1]
 #    print onecar['id']
     onecar['son'] = parts[1]
@@ -601,6 +606,8 @@ def get_data_label_proxy_mxnet_threads(data_infos, datas, label_infos, labels, d
 
   stdsize = data_infos[0][1][2:]
   dataidx = 0
+#  labels['proxy_yM'] = mx.nd.zeros(label_infos[0][1], dtype=np.float32)
+#  labels['proxy_ZM'] = mx.nd.zeros(label_infos[1][1], dtype=np.float32)
   labels['proxy_yM'][:] = 0
   labels['proxy_ZM'][:] = 1.0
   
@@ -614,7 +621,9 @@ def get_data_label_proxy_mxnet_threads(data_infos, datas, label_infos, labels, d
   
   aug_data = datas['databuffer']
   aug_threads_c2(tmpaths, data_infos[0][1], aug_data)
+#  datas['data'] = mx.nd.zeros(data_infos[0][1], dtype=np.float32)
   datas['data'][:] = aug_data
+#  print aug_data[-1,0]
 
   #ready same data
   for si in xrange(batchsize):

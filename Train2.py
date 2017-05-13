@@ -100,10 +100,10 @@ def Do_Proxy_NCA_Train():
   logger = logging.getLogger()
   logger.setLevel(logging.INFO)
   
-  ctx = mx.gpu(3)
+  ctx = mx.gpu(2)
   
   num_epoch = 10000
-  batch_size = 1
+  batch_size = 16
   featdim = 128
   proxy_num = 500#43928
   clsnum = proxy_num
@@ -111,7 +111,7 @@ def Do_Proxy_NCA_Train():
   proxy_yM_shape = (batch_size, proxy_num)
   proxy_Z_shape = (proxy_num, featdim)
   proxy_ZM_shape = (batch_size, proxy_num)
-  label_shape = dict(zip(['proxy_yM', 'proxy_ZM'], [proxy_yM_shape, proxy_ZM_shape]))
+  label_shape = dict(zip(['proxy_yM', 'proxy_Z_weight', 'proxy_ZM'], [proxy_yM_shape, proxy_Z_shape, proxy_ZM_shape]))
   proxyfn = 'proxy.bin'
 #  datafn = '/home/mingzhang/data/car_ReID_for_zhangming/data_each.list' #43928 calss number.
   datafn = '/home/mingzhang/data/car_ReID_for_zhangming/data_each.500.list'

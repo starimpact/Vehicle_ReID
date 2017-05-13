@@ -266,7 +266,7 @@ def CreateModel_Color_Split_test():
 def proxy_nca_loss_layer(batch_size, proxy_num):
   reid_feature = mx.sym.Variable('reid_feature')
   proxy_yM = mx.sym.Variable('proxy_yM')
-  proxy_Z = mx.sym.Variable(name='proxy_Z_weight')
+  proxy_Z = mx.sym.Variable(name='proxy_Z_weight', shape=(proxy_num, 128), dtype=np.float32)
   proxy_ZM = mx.sym.Variable('proxy_ZM')
 
   reid_feature = mx.sym.Custom(data=reid_feature, proxy=proxy_Z, proxy_num=proxy_num, name='proxy_set', op_type='proxy_set')
