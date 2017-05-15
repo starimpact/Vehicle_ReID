@@ -6,4 +6,5 @@ ImageResult
 *.bin
 tmpimg
 augmentation_threads/build
+ranker/build
 proxy_Z.params*

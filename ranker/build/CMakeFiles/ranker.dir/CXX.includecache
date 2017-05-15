@@ -1,0 +1,36 @@
+#IncludeRegexLine: ^[ 	]*#[ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/mingzhang/work/reid/Vehicle_ReID/ranker/database.h
+boost/thread/mutex.hpp
+-
+boost/thread/shared_mutex.hpp
+-
+boost/thread/condition_variable.hpp
+-
+vector
+-
+stdint.h
+-
+
+/home/mingzhang/work/reid/Vehicle_ReID/ranker/do_ranker.cpp
+iostream
+-
+vector
+-
+thread
+-
+database.h
+/home/mingzhang/work/reid/Vehicle_ReID/ranker/database.h
+mytimer.h
+/home/mingzhang/work/reid/Vehicle_ReID/ranker/mytimer.h
+
+/home/mingzhang/work/reid/Vehicle_ReID/ranker/mytimer.h
+time.h
+-
+

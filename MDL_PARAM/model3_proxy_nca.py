@@ -541,7 +541,7 @@ def create_reid4_net(batch_size, proxy_num):
 
   proxy_nca = mx.sym.Concat(*proxy_ncas, dim=0)
   if useHing:
-    reid_net = mx.sym.maximum(0.0, proxy_nca)
+    reid_net = mx.sym.maximum(-1.0, proxy_nca)
   else:
     reid_net = proxy_nca
   reid_net = mx.sym.MakeLoss(reid_net, name='proxy_nca_loss')
@@ -608,12 +608,29 @@ def CreateModel_Color_Split_test():
    if True:
      feature_norm = mx.sym.sqrt(mx.sym.sum_axis(reid_feature**2, axis=1))
      feature_norm = mx.sym.Reshape(feature_norm, shape=(-2, 1))
-     reid_feature = mx.sym.broadcast_div(reid_feature, feature_norm) * 4
+     reid_feature = mx.sym.broadcast_div(reid_feature, feature_norm) * 40
 
    feature1 = mx.sym.Variable('feature1_data')
    feature2 = mx.sym.Variable('feature2_data')
 #   absdiff = mx.sym.sum(mx.sym.abs(feature1-feature2), axis=1)
    absdiff = mx.sym.abs(feature1-feature2)
+   return reid_feature, absdiff 
+
+
+def CreateModel_Color_Split_test2(batch_size=1, featdim=128):
+   data1 = mx.sym.Variable('part1_data')
+   args_all = None
+   reid_feature, args_all = create_inception_resnet_v2(data1, namepre='part1', args=args_all)
+   if True:
+     feature_norm = mx.sym.sqrt(mx.sym.sum_axis(reid_feature**2, axis=1))
+     feature_norm = mx.sym.Reshape(feature_norm, shape=(-2, 1))
+     reid_feature = mx.sym.broadcast_div(reid_feature, feature_norm) * 40
+   print '-------------------'
+   feature1 = mx.sym.Variable('feature1_data', shape=(1, featdim))
+   feature2 = mx.sym.Variable('feature2_data', shape=(batch_size, featdim))
+#   feature1 = mx.sym.Reshape(feature1, shape=(1, -1))
+   diff = mx.sym.broadcast_minus(feature1, feature2)
+   absdiff = mx.sym.abs(diff)
    return reid_feature, absdiff 
 
 

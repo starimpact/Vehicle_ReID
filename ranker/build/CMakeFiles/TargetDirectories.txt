@@ -1,0 +1,2 @@
+/home/mingzhang/work/reid/Vehicle_ReID/ranker/build/CMakeFiles/ranker.dir
+/home/mingzhang/work/reid/Vehicle_ReID/ranker/build/CMakeFiles/test.dir
