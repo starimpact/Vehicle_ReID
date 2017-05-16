@@ -386,7 +386,7 @@ def Do_Feature_Test_Fast(load_paramidx):
 
   ctxs = [mx.gpu(0), mx.gpu(1), mx.gpu(2), mx.gpu(3)]
   ctxs = [mx.gpu(0), mx.gpu(1)]
-  ctxs = [mx.gpu(0)]
+#  ctxs = [mx.gpu(0)]
 
   # set up logger
   logger = logging.getLogger()
@@ -398,10 +398,11 @@ def Do_Feature_Test_Fast(load_paramidx):
 
 #  param_prefix = 'MDL_PARAM/params2_proxy_nca_combine/car_reid'
 #  param_prefix = 'MDL_PARAM/params2_proxy_nca/car_reid'
-  param_prefix = 'MDL_PARAM/params3_proxy_nca/car_reid'
+#  param_prefix = 'MDL_PARAM/params3_proxy_nca/car_reid'
 #  param_prefix = 'MDL_PARAM/params3_proxy_nca.bak1/car_reid'
 #  param_prefix = 'MDL_PARAM/params3_proxy_nca.rowmask/car_reid'
 #  param_prefix = 'MDL_PARAM/params3_proxy_nca.blockmask/car_reid'
+  param_prefix = 'MDL_PARAM/params3_proxy_nca.back1/car_reid'
   feature_model = create_predict_feature_model(ctxs, [['part1_data', data_shape]], param_prefix, load_paramidx)
 
 #  fdir = '/mnt/ssd2/minzhang/Re-ID_select'
@@ -481,7 +482,7 @@ if __name__=='__main__':
 #  Do_Feature_Test(restore_whichone, ctx)
 #  Do_Compare_Test(restore_whichone, ctx)
 #############
-  if 1:
+  if 0:
     Do_Feature_Test_Fast(restore_whichone)
   else:
     Do_Feature_Compare_Fast()
