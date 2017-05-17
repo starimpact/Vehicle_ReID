@@ -136,10 +136,14 @@ def Do_Proxy_NCA_Train2():
     epoch = args[0].epoch
     nbatch = args[0].nbatch + 1
     eval_metric = args[0].eval_metric
-    data_batch = args[0].locals['data_batch']  
-    data = data_batch.data[0].asnumpy()
+#    data_batch = args[0].locals['data_batch']  
+#    data = data_batch.data[0].asnumpy()
 #    print 'data:', np.abs(data).mean()
 #    raise ValueError("show data...")
+    if nbatch%16==0:
+#      print 'sync parameters.....'
+      args, auxs = reid_model.get_params()
+      reid_model.set_params(args, auxs)
     if nbatch%show_period==0:
        fn = param_prefix + '_' + str(epoch%4) + '_' + '.bin'
        reid_model.save_params(fn)

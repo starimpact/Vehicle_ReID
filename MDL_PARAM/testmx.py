@@ -53,86 +53,65 @@ def test2():
   print c_exe.outputs[0].asnumpy()
 
 
-def init_args(args):
-  initializer = mx.init.Normal()
-  for key in args:
-    arr = args[key]
-    if key.endswith('_weight'):
-      initializer(mx.init.InitDesc(key), arr)
-    if key.endswith('_bias'):
-      arr[:] = 0.0
-    if key.endswith('_gamma'):
-      arr[:] = 1.0
-    if key.endswith('_beta'):
-      arr[:] = 0.0
-    if key.endswith('_init_c'):
-      arr[:] = 0.0
-    if key.endswith('_init_h'):
-      arr[:] = 0.0
+#class Cast_Type(mx.operator.CustomOp):
+#  def forward(self, is_train, req, in_data, out_data, aux):
+#    self.assign
+#  def __init__(self):
+#    super(Cast_Type, self).__init__(need_top_grad=True)
+#
+#  def list_arguments(self):
+#    return ['data']
+#
+#  def list_outputs(self):
+#    return ['output']
+#
+#  def infer_shape(self, inshape):
 
 
+#def init_args(args):
+#  initializer = mx.init.Normal()
+#  for key in args:
+#    arr = args[key]
+#    if key.endswith('_weight'):
+#      initializer(mx.init.InitDesc(key), arr)
+##      initializer(key, arr)
+#    if key.endswith('_bias'):
+#      arr[:] = 0.0
+#    if key.endswith('_gamma'):
+#      arr[:] = 1.0
+#    if key.endswith('_beta'):
+#      arr[:] = 0.0
+#    if key.endswith('_init_c'):
+#      arr[:] = 0.0
+#    if key.endswith('_init_h'):
+#      arr[:] = 0.0
+
+
+featdim = 2
 def create_reid4_net(batch_size, proxy_num):
-  data0 = mx.sym.Variable('data')
-  proxy_yM = mx.sym.Variable('proxy_yM')
+  one_feat = mx.sym.Variable('data')
+  one_proxy_yM = mx.sym.Variable('proxy_yM')
   proxy_Z = mx.sym.Variable(name='proxy_Z_weight',
-                       shape=(proxy_num, 128), dtype=np.float32)
-  proxy_ZM = mx.sym.Variable('proxy_ZM')
-  reid_feature = data0
-  print reid_feature.name
+                       shape=(proxy_num, featdim), dtype=np.float32)
+  one_proxy_ZM = mx.sym.Variable('proxy_ZM')
 
-  features = mx.sym.SliceChannel(reid_feature, axis=0, num_outputs=batch_size, name='features_slice')
-  proxy_yMs = mx.sym.SliceChannel(proxy_yM, axis=0, num_outputs=batch_size, name='proxy_yM_slice')
-  proxy_ZMs = mx.sym.SliceChannel(proxy_ZM, axis=0, num_outputs=batch_size, name='proxy_ZM_slice')
-  proxy_ncas = []
-  min_value = 10**-16
-  norm_value = (84**0.5)/2
-  print 'norm_value:', norm_value
+  tzM = mx.sym.Reshape(one_proxy_ZM, shape=(-1,))
+  z = mx.sym.broadcast_minus(one_feat, proxy_Z)
+  z = mx.sym.abs(z)
+  z = mx.sym.sum_axis(z, axis=1)
 
-  #norm
-  if True:
-    proxy_Znorm = mx.sym.sum_axis(proxy_Z**2, axis=1)
-    proxy_Znorm = mx.sym.sqrt(proxy_Znorm)
-    proxy_Znorm = mx.sym.Reshape(proxy_Znorm, shape=(-2, 1))
-    proxy_Z = mx.sym.broadcast_div(proxy_Z, proxy_Znorm) * norm_value
+  tyM = mx.sym.Reshape(one_proxy_yM, shape=(-1, 1)) 
+  one_proxy_y = mx.sym.broadcast_mul(tyM, proxy_Z)
+  one_proxy_y = mx.sym.sum_axis(one_proxy_y, axis=0)
+  one_feat = mx.sym.Reshape(one_feat, shape=(-1,))
+  y = one_feat - one_proxy_y
+  y = mx.sym.abs(y)
+  y = mx.sym.sum(y)
 
-  for bi in xrange(batch_size):
-    one_feat = features[bi]
-    
-    #norm 
-    if True:
-      one_feat_norm = mx.sym.sqrt(mx.sym.sum(one_feat**2))
-      one_feat_norm = mx.sym.Reshape(one_feat_norm, shape=(-2, 1)) 
-      one_feat = mx.sym.broadcast_div(one_feat, one_feat_norm) * norm_value
-    
-    one_proxy_yM = proxy_yMs[bi]
-    one_proxy_ZM = proxy_ZMs[bi]
+  z_y = mx.sym.broadcast_minus(z, y)
+  one_proxy_nca = mx.sym.sum(z_y * tzM)
 
-    tzM = mx.sym.Reshape(one_proxy_ZM, shape=(-1,))
-    z = mx.sym.broadcast_minus(one_feat, proxy_Z)
-    z = mx.sym.abs(z)
-    z = mx.sym.sum_axis(z, axis=1)
-    z = -z
-
-    tyM = mx.sym.Reshape(one_proxy_yM, shape=(-1, 1)) 
-    one_proxy_y = mx.sym.broadcast_mul(tyM, proxy_Z)
-    one_proxy_y = mx.sym.sum_axis(one_proxy_y, axis=0)
-    one_feat = mx.sym.Reshape(one_feat, shape=(-1,))
-    y = one_feat - one_proxy_y
-    y = mx.sym.abs(y)
-    y = mx.sym.sum(y)
-    y = -y
-
-    z_y = mx.sym.broadcast_minus(z, y)
-    one_proxy_nca = mx.sym.sum(z_y * tzM)
-#    z_y = mx.sym.exp(z_y) * tzM 
-#    z_y = mx.sym.sum(z_y)
-#    z_y = z_y + min_value
-#    one_proxy_nca = mx.sym.log(z_y)
-    
-    proxy_ncas.append(one_proxy_nca)
-
-  proxy_nca = mx.sym.Concat(*proxy_ncas, dim=0)
-  reid_net = proxy_nca 
+  reid_net = one_proxy_nca 
   reid_net = mx.sym.MakeLoss(reid_net, name='proxy_nca_loss')
 
   return reid_net
@@ -149,39 +128,44 @@ def get_params(sym, ctx, data_shape, label_shape):
   grad_params = {}
   for name, shape in zip(arg_names, arg_shapes):
     arg_params[name] = mx.nd.zeros(shape, ctx)
-    grad_params[name] = mx.nd.zeros(shape, ctx)
     if name.endswith('weight') or name.endswith('bias') or \
         name.endswith('gamma') or name.endswith('beta'):
       update_params[name] = arg_params[name]
       grad_req[name] = 'write'
-    elif False and name=='proxy_yM':
+      grad_params[name] = mx.nd.zeros(shape, ctx)
+    elif True and name=='proxy_yM':
       grad_req[name] = 'write'
-    else:
-      grad_req[name] = 'null'
+      grad_params[name] = mx.nd.zeros(shape, ctx)
 
-  init_args(arg_params)
   return arg_params, grad_req, grad_params
 
 def test4():
   ctx = mx.gpu(0)
   batchsize = 1
-  proxy_num = 100
+  proxy_num = 10
   yM_shape = (batchsize, proxy_num) 
   ZM_shape = (batchsize, proxy_num) 
-  data_shape = (batchsize, 128)
+  data_shape = (batchsize, featdim)
   label_shape = {'proxy_yM':yM_shape, 'proxy_ZM':ZM_shape}
+
+  inputypes = {'data':np.float32, 'proxy_yM':np.float32, 
+               'proxy_ZM':np.float32}
   
   net = create_reid4_net(batchsize, proxy_num) 
+  argt, _, auxt = net.infer_type(**inputypes)
   arg_params, grad_req, grad_params = get_params(net, ctx, data_shape, label_shape)
   executor = net.bind(ctx, arg_params, args_grad=grad_params, grad_req=grad_req)
 
   grad_dict = executor.grad_dict
   arg_dict = executor.arg_dict 
-  arg_dict['data'][:] = np.random.rand(data_shape[0], data_shape[1])
+  arg_dict['data'][:] = np.asarray(range(np.prod(data_shape)), dtype=np.float32).reshape(data_shape)/np.prod(data_shape)
   arg_dict['proxy_yM'][:] = 0
   arg_dict['proxy_yM'][0, 1] = 1
   arg_dict['proxy_ZM'][:] = 1
-  arg_dict['proxy_ZM'][0, 1] = 0
+  arg_dict['proxy_ZM'][0, 1] = 0 
+  zshape = arg_dict['proxy_Z_weight'].shape
+  zdata = np.asarray(range(np.prod(zshape)), dtype=np.float32)/np.prod(zshape)
+  arg_dict['proxy_Z_weight'][:] = zdata.reshape(zshape)
 
 
   executor.forward(True)
@@ -191,12 +175,11 @@ def test4():
   print 'data mean:', arg_dict['data'].asnumpy().mean()
   print 'Z_weight:', arg_dict['proxy_Z_weight'].asnumpy().mean() 
   print 'grad Z_weight:', grad_dict['proxy_Z_weight'].asnumpy().mean()
-  print 'grad data:', grad_dict['data'].asnumpy().mean()
-  print 'grad yM:', grad_dict['proxy_yM'].asnumpy().mean()
 
 
 
 if __name__=='__main__':
+  test4()
   test4()
 
 

@@ -142,7 +142,7 @@ def Do_Proxy_NCA_Train2():
   proxy_batch = 40000#720000
   proxy_num = proxy_batch#43928#proxy_batch
   clsnum = proxy_num
-  data_shape = (batch_size, 3, 299, 299)
+  data_shape = (batch_size, 3, 200, 200)
   proxy_yM_shape = (batch_size, proxy_num)
   proxy_Z_shape = (proxy_num, featdim)
   proxy_ZM_shape = (batch_size, proxy_num)
@@ -151,7 +151,7 @@ def Do_Proxy_NCA_Train2():
   datafn = '/home/mingzhang/data/car_ReID_for_zhangming/data_each.list' #43928 calss number.
 #  datafn = '/home/mingzhang/data/car_ReID_for_zhangming/data_each.500.list'
 #  data_train = CarReID_Proxy2_Iter(['data'], [data_shape], ['proxy_yM', 'proxy_ZM'], [proxy_yM_shape, proxy_ZM_shape], datafn, bucket_key)
-  data_train = CarReID_Proxy_Batch_Mxnet_Iter(['data'], [data_shape], ['proxy_yM', 'proxy_ZM'], [proxy_yM_shape, proxy_ZM_shape], datafn, total_proxy_num, featdim, proxy_batch, 1000)
+  data_train = CarReID_Proxy_Batch_Mxnet_Iter(['data'], [data_shape], ['proxy_yM', 'proxy_ZM'], [proxy_yM_shape, proxy_ZM_shape], datafn, total_proxy_num, featdim, proxy_batch, 1)
   
   dlr = 400000/batch_size
 #  dlr_steps = [dlr, dlr*2, dlr*3, dlr*4]

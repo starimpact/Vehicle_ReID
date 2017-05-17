@@ -213,7 +213,7 @@ def create_inception_resnet_v2(data, namepre='', args=None):
   final_block8, args['final_block8'] = block8(repeat_block8, with_act=False, input_num_channels=2080, namepre=namepre+'_final_block8', args=args['final_block8'])
 
   final_conv, args['final_conv'] = ConvFactory(final_block8, 1536, (1, 1), namepre=namepre+'_final_conv', args=args['final_conv'])
-  final_pool = mx.symbol.Pooling(final_conv, kernel=(8, 8), stride=(1, 1), pool_type='avg', name=namepre+'_final_pool')
+  final_pool = mx.symbol.Pooling(final_conv, global_pool=True, kernel=(8, 8), stride=(1, 1), pool_type='avg', name=namepre+'_final_pool')
   final_flatten = mx.symbol.Flatten(final_pool, name=namepre+'_final_flatten')
 
   drop1 = mx.sym.Dropout(data=final_flatten, p=0.5, name=namepre+'_dropout1')
@@ -454,12 +454,11 @@ def create_reid3_net(batch_size, proxy_num):
   return reid_net
 
 def create_reid4_net(batch_size, proxy_num):
-  print "note: image size must be:(299, 299)"
 
   data0 = mx.sym.Variable('data')
   proxy_yM = mx.sym.Variable('proxy_yM')
   proxy_Z = mx.sym.Variable(name='proxy_Z_weight', 
-                       shape=(proxy_num, 128), dtype=np.float32)
+                       shape=(proxy_num, 128))#, dtype=np.float32)
   proxy_ZM = mx.sym.Variable('proxy_ZM')
   args_all = None
   reid_feature, args_all = create_inception_resnet_v2(data0, namepre='part1', args=args_all)
@@ -551,7 +550,6 @@ def CreateModel_Color(ctx, batch_size, proxy_num, imagesize):
 
 def CreateModel_Color2(ctx, batch_size, proxy_num, imagesize):
   print 'creating network model2_proxy_nca...'
-  assert(imagesize[0]==299 and imagesize[1]==299)
 #  reid_net = create_reid2_net(batch_size, proxy_num)
 #  reid_net = create_reid3_net(batch_size, proxy_num)
   reid_net = create_reid4_net(batch_size, proxy_num)
