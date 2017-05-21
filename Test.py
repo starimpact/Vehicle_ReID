@@ -13,7 +13,8 @@ from Solver import CarReID_Solver
 from Predictor import CarReID_Predictor, CarReID_Feature_Predictor, CarReID_Compare_Predictor, CarReID_Softmax_Predictor
 #from MDL_PARAM import model2_softmax as now_model
 #from MDL_PARAM import model2_proxy_nca as now_model
-from MDL_PARAM import model3_proxy_nca as now_model
+#from MDL_PARAM import model3_proxy_nca as now_model
+from MDL_PARAM import model4_proxy_nca as now_model
 
 def Do_Test():
   print 'Testing...'
@@ -386,14 +387,13 @@ def Do_Feature_Test_Fast(load_paramidx):
 
   ctxs = [mx.gpu(0), mx.gpu(1), mx.gpu(2), mx.gpu(3)]
   ctxs = [mx.gpu(0), mx.gpu(1)]
-#  ctxs = [mx.gpu(0)]
 
   # set up logger
   logger = logging.getLogger()
   logger.setLevel(logging.INFO)
 
   batchsize = 400 * len(ctxs)
-  data_shape = (batchsize, 3, 299, 299)
+  data_shape = (batchsize, 3, 200, 200)
   label_shape = (batchsize, 2)
 
 #  param_prefix = 'MDL_PARAM/params2_proxy_nca_combine/car_reid'
@@ -402,8 +402,11 @@ def Do_Feature_Test_Fast(load_paramidx):
 #  param_prefix = 'MDL_PARAM/params3_proxy_nca.bak1/car_reid'
 #  param_prefix = 'MDL_PARAM/params3_proxy_nca.rowmask/car_reid'
 #  param_prefix = 'MDL_PARAM/params3_proxy_nca.blockmask/car_reid'
-  param_prefix = 'MDL_PARAM/params3_proxy_nca.back1/car_reid'
+#  param_prefix = 'MDL_PARAM/params3_proxy_nca.back1/car_reid'
+#  param_prefix = 'MDL_PARAM/params4_proxy_nca/car_reid'
+  param_prefix = 'MDL_PARAM/params4_proxy_nca.back2/car_reid'
   feature_model = create_predict_feature_model(ctxs, [['part1_data', data_shape]], param_prefix, load_paramidx)
+  feature_model.symbol.save(param_prefix + '-predict.json')
 
 #  fdir = '/mnt/ssd2/minzhang/Re-ID_select'
 #  neednums = [800, 0]

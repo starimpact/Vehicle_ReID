@@ -2,8 +2,8 @@
 #include "simple_thread_pool.h"
 #include "random"
 
-#include "cv.h"
-#include "highgui.h"
+#include "cv.hpp"
+#include "highgui.hpp"
 
 
 struct Aug_Params
@@ -37,7 +37,7 @@ void do_augment_onethread(void *p);
 extern "C" int do_augment_threads(char *pfns[], int num, 
                                   int stdH, int stdW, float *pfImgOut)
 {
-  const int cdwMaxTNum = 24;
+  const int cdwMaxTNum = 48;
   static dg::ThreadPool *psPool = NULL;
   if (psPool == NULL)
   {
@@ -307,7 +307,7 @@ void do_augment_plate_onethread(void *p);
 extern "C" int do_augment_plate_threads(char *pfns[], int *pdwPlates, int num, 
                                   int stdH, int stdW, float *pfImgOut)
 {
-  const int cdwMaxTNum = 24;
+  const int cdwMaxTNum = 48;
   static dg::ThreadPool *psPool = NULL;
   if (psPool == NULL)
   {
@@ -465,7 +465,7 @@ void do_get_test_onethread(void *p);
 extern "C" int do_get_test_threads(char *pfns[], int num, 
                                   int stdH, int stdW, float *pfImgOut)
 {
-  const int cdwMaxTNum = 24;
+  const int cdwMaxTNum = 48;
   static dg::ThreadPool *psPool = NULL;
   if (psPool == NULL)
   {
