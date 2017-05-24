@@ -13,7 +13,8 @@ from Solver import CarReID_Solver
 from Predictor import CarReID_Predictor, CarReID_Feature_Predictor, CarReID_Compare_Predictor, CarReID_Softmax_Predictor
 #from MDL_PARAM import model2_softmax as now_model
 #from MDL_PARAM import model2_proxy_nca as now_model
-from MDL_PARAM import model3_proxy_nca as now_model
+#from MDL_PARAM import model3_proxy_nca as now_model
+from MDL_PARAM import model4_proxy_nca as now_model
 
 def Do_Test():
   print 'Testing...'
@@ -206,8 +207,11 @@ def do_predict_feature(predict_model, data_iter, savefolder, nn):
   needbnum = int(np.ceil(nn*1.0/data_iter.batch_size))
   for data in data_iter:
     print 'feature extracting...%.2f%%(%d/%d, %d), to %s'%(data_iter.cur_batch*100.0/data_iter.num_batches, data_iter.cur_batch, data_iter.num_batches, needbnum, savefolder)
+    t0 = time.time()
     predict_model.forward(data)
     feats = predict_model.get_outputs()[0].asnumpy()
+    t1 = time.time()
+    print '%d,%d:%.2f ms'%(data_iter.cur_batch, data_iter.batch_size, (t1-t0)*1000)
     labels = data.label[0].asnumpy()
     cPickle.dump([labels, feats, data_iter.paths], open('%s/%d.feat'%(savefolder, data_iter.cur_batch), 'wb'))
     if needbnum>0 and data_iter.cur_batch>=needbnum:
@@ -389,23 +393,26 @@ def Do_Feature_Test_Fast(load_paramidx):
   logger.setLevel(logging.INFO)
 
   batchsize = 400 * len(ctxs)
-  data_shape = (batchsize, 3, 299, 299)
+  data_shape = (batchsize, 3, 200, 200)
   label_shape = (batchsize, 2)
 
 #  param_prefix = 'MDL_PARAM/params2_proxy_nca_combine/car_reid'
 #  param_prefix = 'MDL_PARAM/params2_proxy_nca/car_reid'
-  param_prefix = 'MDL_PARAM/params3_proxy_nca/car_reid'
+#  param_prefix = 'MDL_PARAM/params3_proxy_nca/car_reid'
+#  param_prefix = 'MDL_PARAM/params3_proxy_nca.bak1/car_reid'
 #  param_prefix = 'MDL_PARAM/params3_proxy_nca.rowmask/car_reid'
 #  param_prefix = 'MDL_PARAM/params3_proxy_nca.blockmask/car_reid'
+#  param_prefix = 'MDL_PARAM/params3_proxy_nca.back1/car_reid'
+  param_prefix = 'MDL_PARAM/params4_proxy_nca/car_reid'
+#  param_prefix = 'MDL_PARAM/params4_proxy_nca.back2/car_reid'
+#  param_prefix = 'MDL_PARAM/params4_proxy_nca.back3/car_reid'
   feature_model = create_predict_feature_model(ctxs, [['part1_data', data_shape]], param_prefix, load_paramidx)
+  feature_model.symbol.save(param_prefix + '-predict.json')
 
-#  fdir = '/mnt/ssd2/minzhang/Re-ID_select'
-#  neednums = [800, 0]
-#  data_query_fn = [fdir+'/cam_each_0.list', fdir+'/cam_each_1.list']
-#  save_folder_fn = [fdir+'/cam_feat_quick_0', fdir+'/cam_feat_quick_1'] 
-
-  fdir = '/mnt/ssd2/minzhang/ReID_BigBenchMark/mingzhang'
-  fdir = '/home/mingzhang/data/ReID_BigBenchMark/mingzhang'
+#  fdir = '/mnt/ssd2/minzhang/ReID_BigBenchMark/mingzhang'
+#  fdir = '/home/mingzhang/data/ReID_BigBenchMark/mingzhang'
+  fdir = '/home/mingzhang/data/ReID_BigBenchMark/mingzhang2'
+#  fdir = '/home/mingzhang/data/Re-ID_select/mingzhang'
   neednums = [0, 0, 0, 0]
   data_query_fn = [fdir+'/front_image_list_query_3200.list', 
                    fdir+'/back_image_list_query_3200.list',
@@ -444,13 +451,15 @@ def Do_Feature_Compare_Fast():
 #  distractorlist_fn = [fdir+'/cam_feat_quick_1.list'] 
   savefolder = 'Result'
 
-  fdir = '/mnt/ssd2/minzhang/ReID_BigBenchMark/mingzhang'
-  fdir = '/home/mingzhang/data/ReID_BigBenchMark/mingzhang'
+#  fdir = '/mnt/ssd2/minzhang/ReID_BigBenchMark/mingzhang'
+  fdir = '/home/mingzhang/data/ReID_BigBenchMark/mingzhang2'
+#  fdir = '/home/mingzhang/data/Re-ID_select/mingzhang'
   querylist_fn = [fdir+'/front_image_query.list', 
                   fdir+'/back_image_query.list'] 
   distractorlist_fn = [fdir+'/front_image_distractor.list',
                        fdir+'/back_image_distractor.list']
-  qtypes = ['front', 'back']
+  qtypes = ['front',
+            'back']
 
   query_lists = []
   for qfn in querylist_fn:
