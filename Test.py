@@ -403,18 +403,16 @@ def Do_Feature_Test_Fast(load_paramidx):
 #  param_prefix = 'MDL_PARAM/params3_proxy_nca.rowmask/car_reid'
 #  param_prefix = 'MDL_PARAM/params3_proxy_nca.blockmask/car_reid'
 #  param_prefix = 'MDL_PARAM/params3_proxy_nca.back1/car_reid'
-#  param_prefix = 'MDL_PARAM/params4_proxy_nca/car_reid'
-  param_prefix = 'MDL_PARAM/params4_proxy_nca.back2/car_reid'
+  param_prefix = 'MDL_PARAM/params4_proxy_nca/car_reid'
+#  param_prefix = 'MDL_PARAM/params4_proxy_nca.back2/car_reid'
+#  param_prefix = 'MDL_PARAM/params4_proxy_nca.back3/car_reid'
   feature_model = create_predict_feature_model(ctxs, [['part1_data', data_shape]], param_prefix, load_paramidx)
   feature_model.symbol.save(param_prefix + '-predict.json')
 
-#  fdir = '/mnt/ssd2/minzhang/Re-ID_select'
-#  neednums = [800, 0]
-#  data_query_fn = [fdir+'/cam_each_0.list', fdir+'/cam_each_1.list']
-#  save_folder_fn = [fdir+'/cam_feat_quick_0', fdir+'/cam_feat_quick_1'] 
-
-  fdir = '/mnt/ssd2/minzhang/ReID_BigBenchMark/mingzhang'
-  fdir = '/home/mingzhang/data/ReID_BigBenchMark/mingzhang'
+#  fdir = '/mnt/ssd2/minzhang/ReID_BigBenchMark/mingzhang'
+#  fdir = '/home/mingzhang/data/ReID_BigBenchMark/mingzhang'
+  fdir = '/home/mingzhang/data/ReID_BigBenchMark/mingzhang2'
+#  fdir = '/home/mingzhang/data/Re-ID_select/mingzhang'
   neednums = [0, 0, 0, 0]
   data_query_fn = [fdir+'/front_image_list_query_3200.list', 
                    fdir+'/back_image_list_query_3200.list',
@@ -453,13 +451,15 @@ def Do_Feature_Compare_Fast():
 #  distractorlist_fn = [fdir+'/cam_feat_quick_1.list'] 
   savefolder = 'Result'
 
-  fdir = '/mnt/ssd2/minzhang/ReID_BigBenchMark/mingzhang'
-  fdir = '/home/mingzhang/data/ReID_BigBenchMark/mingzhang'
+#  fdir = '/mnt/ssd2/minzhang/ReID_BigBenchMark/mingzhang'
+  fdir = '/home/mingzhang/data/ReID_BigBenchMark/mingzhang2'
+#  fdir = '/home/mingzhang/data/Re-ID_select/mingzhang'
   querylist_fn = [fdir+'/front_image_query.list', 
                   fdir+'/back_image_query.list'] 
   distractorlist_fn = [fdir+'/front_image_distractor.list',
                        fdir+'/back_image_distractor.list']
-  qtypes = ['front', 'back']
+  qtypes = ['front',
+            'back']
 
   query_lists = []
   for qfn in querylist_fn:

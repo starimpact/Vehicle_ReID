@@ -266,9 +266,10 @@ def Do_Proxy_NCA_Train3():
   label_shape = dict(zip(['proxy_yM', 'proxy_ZM'], [proxy_yM_shape, proxy_ZM_shape]))
   proxyfn = 'proxy.bin'
 #  datapath = '/home/mingzhang/data/ReID_origin/mingzhang/'
-  datapath = '/home/mingzhang/data/ReID_origin/mingzhang2/'
+#  datapath = '/home/mingzhang/data/ReID_origin/mingzhang2/'
 #  datapath = '/mnt/ssd2/minzhang/ReID_origin/mingzhang/'
 #  datapath = '/mnt/ssd2/minzhang/ReID_origin/mingzhang2/'
+  datapath = '/home/mingzhang/data/ReID_origin/mingzhang3/'
 
 #  datafn_list = ['front_plate_image_list_train.list', 'back_plate_image_list_train.list'] #261708 calss number.
 #  datafn_list = ['data_each_part6.list', 'data_each_part7.list'] #142149 calss number.
@@ -281,7 +282,7 @@ def Do_Proxy_NCA_Train3():
   dlr = 400000/batch_size
 #  dlr_steps = [dlr, dlr*2, dlr*3, dlr*4]
 
-  lr_start = (10**-3)*1
+  lr_start = (10**-4)*5
   lr_min = 10**-6
   lr_reduce = 0.95
   lr_stepnum = np.log(lr_min/lr_start)/np.log(lr_reduce)
@@ -349,7 +350,7 @@ def Do_Proxy_NCA_Train3():
                  initializer=mx.init.Normal(),
                  begin_epoch=0, num_epoch=num_epoch, 
                  eval_end_callback=None,
-                 kvstore=None,# monitor=mon,
+                 kvstore='device',# monitor=mon,
 #                 kvstore='local_allreduce_cpu',# monitor=mon,
 #                 kvstore='local_allreduce_gpu',# monitor=mon,
                  batch_end_callback=batch_end_calls,
@@ -372,8 +373,10 @@ def prepare_proxy_Z(proxyfn='proxy_Z_gen.params'):
   featdim = 128
   proxy_Z_shape = (proxy_num, featdim)
 
-  datapath = '/home/mingzhang/data/ReID_origin/mingzhang2/'
-  datafn_list = ['front_plate_image_list_train.list', 'back_plate_image_list_train.list'] #261708 calss number.
+#  datapath = '/home/mingzhang/data/ReID_origin/mingzhang2/'
+  datapath = '/home/mingzhang/data/ReID_origin/mingzhang3/'
+#  datafn_list = ['front_plate_image_list_train.list', 'back_plate_image_list_train.list'] #261708 calss number.
+  datafn_list = ['front_plate_image_list_train.list'] #261708 calss number.
   for di in xrange(len(datafn_list)):
     datafn_list[di] = datapath + datafn_list[di]
 
@@ -381,7 +384,8 @@ def prepare_proxy_Z(proxyfn='proxy_Z_gen.params'):
   reid_feature_net, _ = proxy_nca_model.CreateModel_Color_Split_test()
   reid_model = mx.mod.Module(context=ctxs, symbol=reid_feature_net, data_names=['part1_data'])
   reid_model.bind(data_shapes=data_predict.provide_data, for_training=False)
-  param_prefix = 'MDL_PARAM/params3_proxy_nca/car_reid'
+#  param_prefix = 'MDL_PARAM/params3_proxy_nca/car_reid'
+  param_prefix = 'MDL_PARAM/params4_proxy_nca/car_reid'
   load_paramidx = 3
   arg_params, aux_params = load_checkpoint(reid_model, param_prefix, load_paramidx, proxy_Z_shape)
   

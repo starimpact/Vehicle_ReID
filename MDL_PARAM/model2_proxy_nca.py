@@ -213,7 +213,7 @@ def create_inception_resnet_v2(data, namepre='', args=None):
   final_block8, args['final_block8'] = block8(repeat_block8, with_act=False, input_num_channels=2080, namepre=namepre+'_final_block8', args=args['final_block8'])
 
   final_conv, args['final_conv'] = ConvFactory(final_block8, 1536, (1, 1), namepre=namepre+'_final_conv', args=args['final_conv'])
-  final_pool = mx.symbol.Pooling(final_conv, kernel=(8, 8), stride=(1, 1), pool_type='avg', name=namepre+'_final_pool')
+  final_pool = mx.symbol.Pooling(final_conv, global_pool=True, kernel=(8, 8), stride=(1, 1), pool_type='avg', name=namepre+'_final_pool')
   final_flatten = mx.symbol.Flatten(final_pool, name=namepre+'_final_flatten')
 
   drop1 = mx.sym.Dropout(data=final_flatten, p=0.5, name=namepre+'_dropout1')
