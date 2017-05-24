@@ -94,6 +94,51 @@ class CarReID_Predict_Iter(mx.io.DataIter):
       raise StopIteration
 
 
+class CarReID_TestQuick_Iter(mx.io.DataIter):
+  def __init__(self, data_names, data_shapes, label_names, label_shapes, datafn_list):
+    super(CarReID_TestQuick_Iter, self).__init__()
+
+    self._provide_data = zip(data_names, data_shapes)
+    self._provide_label = zip(label_names, label_shapes)
+    self.cur_batch = 0
+    self.datalist = dg.get_datalist2(datafn_list)
+    self.datalen = len(self.datalist)
+    self.num_batches = self.datalen / label_shapes[0][0]
+    self.batch_size = label_shapes[0][0]
+    if self.datalen%label_shapes[0][0]!=0:
+      self.num_batches += 1
+    self.datas_batch = {}
+    self.datas_batch['data'] = mx.nd.zeros(data_shapes[0], dtype=np.float32)
+    self.datas_batch['databuffer'] = np.zeros(data_shapes[0], dtype=np.float32)
+    self.labels_batch = {}
+    self.labels_batch['id'] = mx.nd.zeros(label_shapes[0], dtype=np.int32)
+    self.paths = None
+
+  def __iter__(self):
+    return self
+
+  def reset(self):
+    self.cur_batch = 0        
+
+  def __next__(self):
+    return self.next()
+
+  @property
+  def provide_data(self):
+    return self._provide_data
+
+  @property
+  def provide_label(self):
+    return self._provide_label
+
+  def next(self):
+    if self.cur_batch < self.num_batches:
+      datas, labels, paths = dg.get_test_data_label_pair_threads(self._provide_data, self.datas_batch, self._provide_label, self.labels_batch, self.datalist, self.cur_batch) 
+      self.cur_batch += 1
+      self.paths = paths
+      return mx.io.DataBatch(datas, labels)
+    else:
+      raise StopIteration
 
 
 class CarReID_Test_Iter(mx.io.DataIter):
@@ -735,6 +780,7 @@ class CarReID_Proxy_Batch_Plate_Mxnet_Iter2(mx.io.DataIter):
     if os.path.exists(self.proxy_Z_fn):
       tmpZ = mx.nd.load(self.proxy_Z_fn)
       self.proxy_Z = tmpZ[0].asnumpy()
+      print self.proxy_num, tmpZ[0].shape[0]
       assert(self.proxy_num==tmpZ[0].shape[0])
       print 'load proxy_Z from', self.proxy_Z_fn
     proxy_Z_ptmp = np.random.rand(self.proxy_batchsize, self.featdim)-0.5
