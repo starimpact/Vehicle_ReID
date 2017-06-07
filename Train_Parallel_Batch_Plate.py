@@ -271,8 +271,7 @@ def Do_Proxy_NCA_Train3():
 #  datapath = '/mnt/ssd2/minzhang/ReID_origin/mingzhang2/'
 #  datapath = '/home/mingzhang/data/ReID_origin/mingzhang3/' #323255
 #  datapath = '/home/mingzhang/data/ReID_origin/mingzhang4/' #604429,#323255
-#  datapath = '/home/mingzhang/data/ReID_origin/mingzhang5/' #604429,#323255
-  datapath = '/home/mingzhang/data2/ReID_origin/mingzhang3/' #604429,#323255
+  datapath = '/home/mingzhang/data/ReID_origin/mingzhang5/' #604429,#323255
 
 #  datafn_list = ['front_plate_image_list_train.list', 'back_plate_image_list_train.list'] #261708 calss number.
   datafn_list = ['front_plate_image_list_train.list'] #261708 calss number.
