@@ -8,3 +8,4 @@ tmpimg
 augmentation_threads/build
 ranker/build
 *.params*
+distribution/mxnet/libmxnet.so

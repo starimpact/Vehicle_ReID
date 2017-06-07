@@ -236,11 +236,11 @@ def Do_Proxy_NCA_Train3():
   logger.setLevel(logging.INFO)
   
 
-  ctxs = [mx.gpu(0), mx.gpu(1), mx.gpu(2), mx.gpu(3), mx.gpu(4), mx.gpu(5), mx.gpu(6)]
+#  ctxs = [mx.gpu(0), mx.gpu(1), mx.gpu(2), mx.gpu(3), mx.gpu(4), mx.gpu(5), mx.gpu(6)]
 #  ctxs = [mx.gpu(0), mx.gpu(1), mx.gpu(2), mx.gpu(3)]
 #  ctxs = [mx.gpu(2), mx.gpu(3), mx.gpu(4), mx.gpu(5), mx.gpu(6), mx.gpu(7)]
 #  ctxs = [mx.gpu(2), mx.gpu(1), mx.gpu(3)]
-#  ctxs = [mx.gpu(0), mx.gpu(1)]
+  ctxs = [mx.gpu(0), mx.gpu(1)]
 #  ctxs = [mx.gpu(0)]
   
   devicenum = len(ctxs) 
