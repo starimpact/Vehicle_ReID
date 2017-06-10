@@ -1,4 +1,5 @@
 import numpy as np
+import logging
 import mxnet as mx 
 import DataGenerator as dg 
 import operator
@@ -884,6 +885,141 @@ class CarReID_Proxy_Batch_Plate_Mxnet_Iter2(mx.io.DataIter):
     else:
       raise StopIteration
 
+
+class CarReID_Proxy_Distribution_Batch_Plate_Mxnet_Iter2(mx.io.DataIter):
+  def __init__(self, data_names, data_shapes, label_names, label_shapes, datafn, 
+               total_proxy_num, featdim, proxy_batchsize, repeat_times=1, num_proxy_batch_max=0.0):
+    super(CarReID_Proxy_Distribution_Batch_Plate_Mxnet_Iter2, self).__init__()
+
+    self.batch_size = data_shapes[0][0]
+    self._provide_data = zip(data_names, data_shapes)
+    self._provide_label = zip(label_names, label_shapes)
+    self.datas_batch = {} 
+    self.datas_batch['data'] = mx.nd.zeros(data_shapes[0], dtype=np.float32)
+    self.datas_batch['databuffer'] = np.zeros(data_shapes[0], dtype=np.float32)
+    self.labels_batch = {}
+    self.labels_batch['proxy_yM'] = mx.nd.zeros(label_shapes[0], dtype=np.float32)
+    self.labels_batch['proxy_ZM'] = mx.nd.zeros(label_shapes[1], dtype=np.float32)
+    self.cur_batch = 0
+    self.datalist = dg.get_datalist2(datafn)
+    self.datalen = len(self.datalist)
+    self.labeldict = dict(self._provide_label)
+    self.proxy_batchsize = proxy_batchsize
+    self.rndidx_list = None 
+    self.num_batches = self.proxy_batchsize / label_shapes[0][0]
+    self.batch_carids = []
+    self.batch_infos = []
+    self.num_proxy_batch = self.datalen / self.proxy_batchsize
+    self.num_proxy_batch_max = num_proxy_batch_max
+    self.cur_proxy_batch = 0
+    self.big_epoch = 0
+    self.proxy_num = total_proxy_num
+    self.featdim = featdim
+    self.proxy_Z_fn = './proxy_Z.params'
+    proxy_Ztmp = np.random.rand(self.proxy_num, self.featdim)-0.5
+    self.proxy_Z = proxy_Ztmp.astype(np.float32) 
+    if os.path.exists(self.proxy_Z_fn):
+      tmpZ = mx.nd.load(self.proxy_Z_fn)
+      self.proxy_Z = tmpZ[0].asnumpy()
+      print self.proxy_num, tmpZ[0].shape[0]
+      assert(self.proxy_num==tmpZ[0].shape[0])
+      print 'load proxy_Z from', self.proxy_Z_fn
+    self.proxy_Z = mx.nd.array(self.proxy_Z)
+
+    self.proxy_ori_index = np.zeros(self.proxy_batchsize, dtype=np.int32)
+    self.caridnum = 0
+    self.total_proxy_batch_epoch = 0
+    self.repeat_times = repeat_times
+    self.do_reset()
+
+  def __iter__(self):
+    return self
+
+  def reset(self):
+    self.cur_batch = 0        
+    self.batch_carids = []
+    self.batch_infos = []
+    pass
+
+  def do_reset(self):
+    self.cur_batch = 0        
+    self.batch_carids = []
+    self.batch_infos = []
+    if self.total_proxy_batch_epoch == 0 \
+       or self.cur_proxy_batch == self.num_proxy_batch \
+       or (self.num_proxy_batch_max > 0.0 \
+       and self.cur_proxy_batch > self.num_proxy_batch * self.num_proxy_batch_max):
+      self.cur_proxy_batch = 0 
+      self.big_epoch += 1
+      self.rndidx_list = np.random.permutation(self.datalen)
+      logging.info('permutation....................')
+
+    self.proxy_datalist = []
+    carids = {}
+    prndidxs = np.random.permutation(self.proxy_batchsize)
+#    print 'carid 0', self.caridnum, self.proxy_Z_p[:self.caridnum].sum()
+    self.proxy_ori_index[:] = range(-self.proxy_batchsize, 0)
+    for i in xrange(self.proxy_batchsize):
+      pidx = prndidxs[i]
+      pxyi = self.cur_proxy_batch * self.proxy_batchsize + pidx
+      idx = self.rndidx_list[pxyi]
+      onedata = self.datalist[idx] 
+      parts = onedata.split(',')
+      path = parts[0]
+      son = parts[1]
+      plate = parts[2]
+      carid = parts[3]
+      if not carids.has_key(carid):
+        carids[carid] = len(carids)
+      ori_id = int(carid)
+      proxyid = carids[carid] 
+      self.proxy_ori_index[proxyid] = ori_id
+      proxy_str = '%s,%s,%s,%s,%s'%(path, son, plate, carid, str(proxyid))
+      self.proxy_datalist.append(proxy_str)
+
+    self.caridnum = len(carids)
+    logging.info('got another proxy batch to train(%d/%d/%d, %d/%d) [big_epoch=%d]...'%(\
+         self.caridnum, self.proxy_batchsize, self.datalen, self.cur_proxy_batch+1,\
+         self.num_proxy_batch, self.big_epoch))
+
+    self.total_proxy_batch_epoch += 1
+    if self.total_proxy_batch_epoch%self.repeat_times==0:
+      self.cur_proxy_batch += 1
+    self.proxy_ori_index = np.sort(self.proxy_ori_index)
+    pidx = range(self.proxy_ori_index.shape[0])
+    pairval = zip(self.proxy_ori_index, pidx)
+    pairdict = dict(pairval)
+    for idx in xrange(len(self.proxy_datalist)):
+      pstr = self.proxy_datalist[idx]
+      parts = pstr.split(',')
+      carid = int(parts[-2])
+      proxyid = pairdict[carid]
+      self.proxy_datalist[idx] = '%s,%s,%s,%s,%s'%(parts[0], parts[1], parts[2], parts[3], str(proxyid))
+    print self.proxy_ori_index, self.proxy_ori_index.shape
+
+    return self.caridnum, self.proxy_ori_index
+
+  def __next__(self):
+    return self.next()
+
+  @property
+  def provide_data(self):
+    return self._provide_data
+
+  @property
+  def provide_label(self):
+    return self._provide_label
+
+
+  def next(self):
+    if self.cur_batch < self.num_batches:
+      datas, labels, carids, infos = dg.get_data_label_proxy_batch_plate_mxnet_threads2(self._provide_data, self.datas_batch, self._provide_label, self.labels_batch, self.proxy_datalist, self.cur_batch, self.caridnum) 
+      self.batch_carids = carids
+      self.batch_infos = infos
+      self.cur_batch += 1
+      return mx.io.DataBatch(datas, labels)
+    else:
+      raise StopIteration
 
 
 

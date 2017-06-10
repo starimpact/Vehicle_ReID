@@ -344,7 +344,7 @@ def Do_Proxy_NCA_Train3():
 #    epoch_end_call(None, None, arg_params, aux_params)
 
 
-  batch_end_calls = [batch_end_call, mx.callback.Speedometer(batch_size, show_period/10)]
+  batch_end_calls = [batch_end_call, mx.callback.Speedometer(batch_size, show_period/100)]
   epoch_all_calls = [epoch_end_call]
   reid_model.fit(train_data=data_train, eval_metric=proxy_metric,
                  optimizer='sgd',

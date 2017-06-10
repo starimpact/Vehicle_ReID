@@ -9,6 +9,7 @@ from .base import _LIB
 from .base import check_call, c_array, c_str, string_types, mx_uint, py_str
 from .base import NDArrayHandle, KVStoreHandle
 from . import optimizer as opt
+import numpy as np
 
 def _ctype_key_value(keys, vals):
     """
@@ -49,8 +50,13 @@ def _ctype_key_value_partial(keys, ori_shapes, ori_indexes, vals):
     """
     Return ctype arrays for the key-value args, for internal use
     """
-    if isinstance(ori_shapes[0], int):
+    if isinstance(ori_shapes[0], np.int32) \
+       or isinstance(ori_shapes[0], int) \
+       or isinstance(ori_shapes[0], long):
         ori_shapes = [ori_shapes]
+    if isinstance(ori_indexes[0], np.int32) \
+       or isinstance(ori_indexes[0], int) \
+       or isinstance(ori_indexes[0], long):
         ori_indexes = [ori_indexes]
     assert(len(ori_shapes)==len(ori_indexes)) 
     if isinstance(keys, int):
@@ -162,8 +168,7 @@ class KVStore(object):
             self.handle, mx_uint(len(ckeys)), ckeys, cvals))
 
     def init_partial(self, key, value, ori_shape, ori_index):
-        assert(len(ori_shape)==len(ori_index))
-        ckeys, cshapes, cindexes, cvals =_ctype_key_value_partial(key, ori_shape, ori_index, value)
+        ckeys, cshapes, cindexes, cvals = _ctype_key_value_partial(key, ori_shape, ori_index, value)
         check_call(_LIB.MXKVStoreInitPartial(
             self.handle, mx_uint(len(ckeys)), ckeys, cvals, cshapes, cindexes))
 
@@ -234,8 +239,7 @@ class KVStore(object):
             ctypes.c_int(priority)))
 
     def push_partial(self, key, value, ori_shape, ori_index, priority=0):
-        assert(len(ori_shape)==len(ori_index))
-        ckeys, cshapes, cindexes, cvals =_ctype_key_value_partial(key, ori_shape, ori_index, value)
+        ckeys, cshapes, cindexes, cvals = _ctype_key_value_partial(key, ori_shape, ori_index, value)
         check_call(_LIB.MXKVStorePushPartial(
             self.handle, mx_uint(len(ckeys)), ckeys, cvals, cshapes, cindexes,
             ctypes.c_int(priority)))
@@ -304,7 +308,6 @@ class KVStore(object):
             ctypes.c_int(priority)))
 
     def pull_partial(self, key, out, ori_shape, ori_index, priority=0):
-        assert(len(ori_shape)==len(ori_index))
         ckeys, cshapes, cindexes, cvals =_ctype_key_value_partial(key, ori_shape, ori_index, out)
         check_call(_LIB.MXKVStorePullPartial(
             self.handle, mx_uint(len(ckeys)), ckeys, cvals, cshapes, cindexes,

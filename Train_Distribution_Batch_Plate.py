@@ -23,6 +23,7 @@ from mxnet import metric
 
 from DataIter import CarReID_Proxy_Batch_Mxnet_Iter
 from DataIter import CarReID_Proxy_Batch_Plate_Mxnet_Iter2
+from DataIter import CarReID_Proxy_Distribution_Batch_Plate_Mxnet_Iter2
 from Solver import CarReID_Solver, CarReID_Softmax_Solver, CarReID_Proxy_Solver
 from MDL_PARAM import model2 as now_model
 #from MDL_PARAM import model2_proxy_nca as proxy_nca_model
@@ -35,14 +36,6 @@ def save_checkpoint(model, prefix, epoch):
     param_name = '%s-%04d.params' % (prefix, epoch)
     model.save_params(param_name)
     logging.info('[%s]Saved checkpoint to \"%s\"', localip, param_name)
-
-def load_checkpoint2(model, prefix, epoch):
-#    symbol = mx.sym.load('%s-symbol.json' % prefix)
-    param_name = '%s-%04d.params' % (prefix, epoch)
-    model.load_params(param_name)
-    arg_params, aux_params = model.get_params()
-    logging.info('Load checkpoint from \"%s\"', param_name)
-    return arg_params, aux_params
 
 def load_checkpoint(model, prefix, epoch, pZshape):
     param_name = '%s-%04d.params' % (prefix, epoch)
@@ -63,8 +56,8 @@ def load_checkpoint(model, prefix, epoch, pZshape):
             aux_params[name] = value
         else:
             raise ValueError("Invalid param file " + fname)
-    model.set_params(arg_params, aux_params, allow_missing=True)
-    arg_params, aux_params = model.get_params()
+    if model is not None:
+        model.set_params(arg_params, aux_params, allow_missing=True)
     logging.info('Load checkpoint from \"%s\"', param_name)
     return arg_params, aux_params
 
@@ -85,15 +78,7 @@ class Proxy_Metric(metric.EvalMetric):
     eachloss = preds[0].asnumpy()
     loss = eachloss.mean()
     self.sum_metric[0] += loss
-#    print loss, len(preds)#, labels
-#    self.sum_metric[1] += np.sum(eachloss<=0.0)
-#    self.sum_metric[2] += np.sum(eachloss>0.0)
-#    if loss < 0: self.batch_hardidxes[:] = eachloss
-#    for bi in xrange(len(eachloss)):
-#      oneloss = eachloss[bi]
-#      if oneloss*5 > loss:#store harder example
-#        self.batch_hardidxes.append([bi, oneloss])
-    
+   
 
 def do_batch_end_call(reid_model, param_prefix, \
                       show_period, \
@@ -112,7 +97,8 @@ def do_batch_end_call(reid_model, param_prefix, \
       reid_model.set_params(arg_params, aux_params)
 
     if nbatch%show_period==0:
-      save_checkpoint(reid_model, param_prefix, epoch%4)
+      #save_checkpoint(reid_model, param_prefix, epoch%4)
+      pass
 
 
 def do_epoch_end_call(param_prefix, epoch, reid_model, \
@@ -120,132 +106,15 @@ def do_epoch_end_call(param_prefix, epoch, reid_model, \
                       reid_model_P, data_train, \
                       proxy_num, proxy_batch):
     if epoch is not None:
-       save_checkpoint(reid_model, param_prefix, epoch%4)
+      # save_checkpoint(reid_model, param_prefix, epoch%4)
+       pass
 
-    proxy_Z_now = arg_params['proxy_Z_weight']
-    if epoch is not None:
-      data_train.proxy_updateset(proxy_Z_now)
-    carnum, proxy_Zfeat = data_train.do_reset()
+    carnum, proxy_ori_index = data_train.do_reset()
 
-    proxy_Z_now[:] = proxy_Zfeat
-    reid_model.set_params(arg_params, aux_params)
+    reid_model.ori_indexes['proxy_Z_weight'][:] = proxy_ori_index
+    reid_model.pull_params()
     data_train.reset()
     pass
-
-
-
-def Do_Proxy_NCA_Train2():
-  print 'Proxy NCA Training...'
-
-  # set up logger
-  logger = logging.getLogger()
-  logger.setLevel(logging.INFO)
-  
-  ctxs = [mx.gpu(0), mx.gpu(1), mx.gpu(2), mx.gpu(3)]
-#  ctxs = [mx.gpu(2), mx.gpu(1), mx.gpu(3)]
-#  ctxs = [mx.gpu(0), mx.gpu(1)]
-#  ctxs = [mx.gpu(0)]
-  
-  devicenum = len(ctxs) 
-
-  num_epoch = 1000000
-  batch_size = 32*devicenum
-  show_period = 1000
-
-  assert(batch_size%devicenum==0)
-  bsz_per_device = batch_size / devicenum
-  print 'batch_size per device:', bsz_per_device
-  bucket_key = bsz_per_device
-
-  featdim = 128
-  total_proxy_num = 43928
-  proxy_batch = 20000#720000
-  proxy_num = proxy_batch#43928#proxy_batch
-  clsnum = proxy_num
-  data_shape = (batch_size, 3, 299, 299)
-  proxy_yM_shape = (batch_size, proxy_num)
-  proxy_Z_shape = (proxy_num, featdim)
-  proxy_ZM_shape = (batch_size, proxy_num)
-  label_shape = dict(zip(['proxy_yM', 'proxy_ZM'], [proxy_yM_shape, proxy_ZM_shape]))
-  proxyfn = 'proxy.bin'
-  datafn = '/home/mingzhang/data/car_ReID_for_zhangming/data_each.list' #43928 calss number.
-#  datafn = '/home/mingzhang/data/car_ReID_for_zhangming/data_each.500.list'
-#  data_train = CarReID_Proxy2_Iter(['data'], [data_shape], ['proxy_yM', 'proxy_ZM'], [proxy_yM_shape, proxy_ZM_shape], datafn, bucket_key)
-  data_train = CarReID_Proxy_Batch_Mxnet_Iter(['data'], [data_shape], ['proxy_yM', 'proxy_ZM'], [proxy_yM_shape, proxy_ZM_shape], datafn, total_proxy_num, featdim, proxy_batch)
-  
-  dlr = 200000/batch_size
-#  dlr_steps = [dlr, dlr*2, dlr*3, dlr*4]
-
-  lr_start = (10**-3)
-  lr_min = 10**-5
-  lr_reduce = 0.95
-  lr_stepnum = np.log(lr_min/lr_start)/np.log(lr_reduce)
-  lr_stepnum = np.int(np.ceil(lr_stepnum))
-  dlr_steps = [dlr*i for i in xrange(1, lr_stepnum+1)]
-  print 'lr_start:%.1e, lr_min:%.1e, lr_reduce:%.2f, lr_stepsnum:%d'%(lr_start, lr_min, lr_reduce, lr_stepnum)
-  print dlr_steps
-  lr_scheduler = mx.lr_scheduler.MultiFactorScheduler(dlr_steps, lr_reduce)
-  param_prefix = 'MDL_PARAM/params2_proxy_nca/car_reid'
-  load_paramidx = 3 
-
-  reid_net = proxy_nca_model.CreateModel_Color2(None, bsz_per_device, proxy_num, data_shape[2:])
-
-
-  reid_model = mx.mod.Module(context=ctxs, symbol=reid_net, 
-                             label_names=['proxy_yM', 'proxy_ZM'])
-#
-
-  optimizer_params={'learning_rate':lr_start,
-                    'momentum':0.9,
-                    'wd':0.0005,
-                    'lr_scheduler':lr_scheduler,
-                    'clip_gradient':None,
-                    'rescale_grad': 1.0/batch_size}
-
-  batch_hardidxes = []
-  proxy_metric = Proxy_Metric(batch_hardidxes=batch_hardidxes)
-
-
-  def norm_stat(d):
-    return mx.nd.norm(d)/np.sqrt(d.size)
-
-  mon = mx.mon.Monitor(1, norm_stat, 
-                       pattern='.*part1_fc1.*|.*proxy_Z_weight.*')
-
-  def batch_end_call(*args, **kwargs):
-    do_batch_end_call(reid_model, param_prefix, \
-                      show_period, \
-                      batch_hardidxes, \
-                      *args, **kwargs)
-
-
-  def epoch_end_call(epoch, symbol, arg_params, aux_params):
-    do_epoch_end_call(param_prefix, epoch, reid_model, \
-                      arg_params, aux_params, \
-                      None, data_train,\
-                      proxy_num, proxy_batch)
-
-  if True and load_paramidx is not None :
-    reid_model.bind(data_shapes=data_train.provide_data, 
-                    label_shapes=data_train.provide_label)
-    arg_params, aux_params = load_checkpoint(reid_model, param_prefix, load_paramidx)
-    epoch_end_call(None, None, arg_params, aux_params)
-
-  batch_end_calls = [batch_end_call, mx.callback.Speedometer(batch_size, show_period/10)]
-  epoch_all_calls = [epoch_end_call]
-  reid_model.fit(train_data=data_train, eval_metric=proxy_metric,
-                 optimizer='sgd',
-                 optimizer_params=optimizer_params, 
-                 initializer=mx.init.Normal(),
-                 begin_epoch=0, num_epoch=num_epoch, 
-                 eval_end_callback=None,
-                 kvstore=None,# monitor=mon,
-                 batch_end_callback=batch_end_calls,
-                 epoch_end_callback=epoch_all_calls) 
-
-
-  return 
-
 
 def Do_Proxy_NCA_Train3():
   print 'Partial Proxy NCA Training...'
@@ -253,7 +122,6 @@ def Do_Proxy_NCA_Train3():
   # set up logger
   logger = logging.getLogger()
   logger.setLevel(logging.INFO)
-  
 
   ctxs = [mx.gpu(0), mx.gpu(1), mx.gpu(2), mx.gpu(3), mx.gpu(4), mx.gpu(5), mx.gpu(6)]
 #  ctxs = [mx.gpu(0), mx.gpu(1), mx.gpu(2), mx.gpu(3)]
@@ -284,10 +152,6 @@ def Do_Proxy_NCA_Train3():
   proxy_ZM_shape = (batch_size, proxy_num)
   label_shape = dict(zip(['proxy_yM', 'proxy_ZM'], [proxy_yM_shape, proxy_ZM_shape]))
   proxyfn = 'proxy.bin'
-#  datapath = '/home/mingzhang/data/ReID_origin/mingzhang/'
-#  datapath = '/home/mingzhang/data/ReID_origin/mingzhang2/'
-#  datapath = '/mnt/ssd2/minzhang/ReID_origin/mingzhang/'
-#  datapath = '/mnt/ssd2/minzhang/ReID_origin/mingzhang2/'
 #  datapath = '/home/mingzhang/data/ReID_origin/mingzhang3/' #323255
 #  datapath = '/home/mingzhang/data/ReID_origin/mingzhang4/' #604429,#323255
   datapath = '/home/mingzhang/data/ReID_origin/mingzhang5/' #604429,#323255
@@ -298,7 +162,7 @@ def Do_Proxy_NCA_Train3():
 
   for di in xrange(len(datafn_list)):
     datafn_list[di] = datapath + datafn_list[di]
-  data_train = CarReID_Proxy_Batch_Plate_Mxnet_Iter2(['data'], [data_shape], ['proxy_yM', 'proxy_ZM'], [proxy_yM_shape, proxy_ZM_shape], datafn_list, total_proxy_num, featdim, proxy_batch, 1)
+  data_train = CarReID_Proxy_Distribution_Batch_Plate_Mxnet_Iter2(['data'], [data_shape], ['proxy_yM', 'proxy_ZM'], [proxy_yM_shape, proxy_ZM_shape], datafn_list, total_proxy_num, featdim, proxy_batch, 1)
   
   dlr = 400000/batch_size
 #  dlr_steps = [dlr, dlr*2, dlr*3, dlr*4]
@@ -315,13 +179,15 @@ def Do_Proxy_NCA_Train3():
 #  param_prefix = 'MDL_PARAM/params2_proxy_nca/car_reid'
 #  param_prefix = 'MDL_PARAM/params3_proxy_nca/car_reid'
   param_prefix = 'MDL_PARAM/params4_proxy_nca/car_reid'
-  load_paramidx = 3
+  load_paramidx = None
 
   reid_net = proxy_nca_model.CreateModel_Color2(None, bsz_per_device, proxy_num, data_shape[2:])
 
 
   reid_model = mx.mod.Module(context=ctxs, symbol=reid_net, 
-                             label_names=['proxy_yM', 'proxy_ZM'])
+                             label_names=['proxy_yM', 'proxy_ZM'],
+                             ori_parames={'proxy_Z_weight':data_train.proxy_Z},
+                             ori_indexes={'proxy_Z_weight':data_train.proxy_ori_index})
 #
 
   optimizer_params={'learning_rate':lr_start,
@@ -352,18 +218,14 @@ def Do_Proxy_NCA_Train3():
                       None, data_train, \
                       proxy_num, proxy_batch) 
 
-  if True and load_paramidx is not None :
-    reid_model.bind(data_shapes=data_train.provide_data, 
-                    label_shapes=data_train.provide_label)
-    arg_params, aux_params = load_checkpoint(reid_model, param_prefix, load_paramidx, proxy_Z_shape)
-    do_epoch_end_call(param_prefix, None, reid_model, \
-                      arg_params, aux_params, \
-                      None, data_train, \
-                      proxy_num, proxy_batch)
-#    epoch_end_call(None, None, arg_params, aux_params)
+  arg_params = None
+  aux_params = None
+  allow_missing=False 
+  if True and load_paramidx is not None:
+    arg_params, aux_params = load_checkpoint(None, param_prefix, load_paramidx, proxy_Z_shape)
+    allow_missing=True 
 
-
-  batch_end_calls = [batch_end_call, mx.callback.Speedometer(batch_size, show_period/10)]
+  batch_end_calls = [batch_end_call, mx.callback.Speedometer(batch_size, show_period/20)]
   epoch_all_calls = [epoch_end_call]
   reid_model.fit(train_data=data_train, eval_metric=proxy_metric,
                  optimizer='sgd',
@@ -373,7 +235,9 @@ def Do_Proxy_NCA_Train3():
                  eval_end_callback=None,
                  kvstore='dist_async',# monitor=mon,
                  batch_end_callback=batch_end_calls,
-                 epoch_end_callback=epoch_all_calls) 
+                 epoch_end_callback=epoch_all_calls,
+                 arg_params=arg_params, aux_params=aux_params,
+                 allow_missing=allow_missing) 
 
 
   return 
@@ -437,8 +301,6 @@ def prepare_proxy_Z(proxyfn='proxy_Z_gen.params'):
 if __name__=='__main__':
 #  prepare_proxy_Z("proxy_Z_gen5.params")
 #  Do_Train()
-#  Do_Proxy_NCA_Train()
-#  Do_Proxy_NCA_Train2()
   Do_Proxy_NCA_Train3()
 
 

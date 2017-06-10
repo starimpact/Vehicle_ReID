@@ -85,14 +85,17 @@ def _initialize_kvstore(kvstore, param_arrays, arg_params, param_names,
             kvstore.pull(idx, param_on_devs, priority=-idx)
 
 def _initialize_kvstore_partial(kvstore, param_arrays, arg_params, param_names,
-                                ori_shapes, ori_indexes,
+                                ori_params, ori_shapes, ori_indexes,
                                 update_on_kvstore):
     """ Initialize kvstore"""
     assert(len(ori_shapes) == len(ori_indexes))
     for idx, param_on_devs in enumerate(param_arrays):
         name = param_names[idx]
         if name in ori_shapes.keys():
-            kvstore.init_partial(idx, arg_params[name], ori_shapes[name], ori_indexes[name])
+            ori_indextmp = np.asarray(range(ori_params[name].shape[0]), dtype=np.int32)
+            kvstore.init_partial(idx, ori_params[name], arg_params[name].shape, ori_indextmp)
+            kvstore.pull_partial(idx, param_on_devs, ori_shapes[name], ori_indexes[name], priority=-idx)
+            print param_on_devs[0].asnumpy()
             continue
         kvstore.init(idx, arg_params[name])
 
@@ -113,6 +116,7 @@ def _update_params_on_kvstore(param_arrays, grad_arrays, kvstore):
 def _update_params_on_kvstore_partial(param_arrays, grad_arrays, param_names,
                                       ori_shapes, ori_indexes, kvstore):
     """ Perform update of param_arrays from grad_arrays on kvstore."""
+#    print "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
     assert (len(ori_shapes) == len(ori_indexes))
     for index, pair in enumerate(zip(param_arrays, grad_arrays)):
         name = param_names[index]
@@ -126,11 +130,38 @@ def _update_params_on_kvstore_partial(param_arrays, grad_arrays, param_names,
             kvstore.push_partial(index, grad_list, ori_shape, ori_index, priority=-index)
             # pull back the partial weights
             kvstore.pull_partial(index, arg_list, ori_shape, ori_index, priority=-index)
+#            npval = grad_list[0].asnumpy()
+#            sumval = np.sum(npval, axis=1)
+#            print 'push grad, !=0:', np.sum(sumval!=0), ', ==0:', np.sum(sumval==0)
+#            print npval
+#            npval = arg_list[0].asnumpy()
+#            sumval = np.sum(npval, axis=1)
+#            print 'pull weight, !=0:', np.sum(sumval!=0), ', ==0:', np.sum(sumval==0)
+#            print npval
+#            if np.sum(sumval==0) > 0:
+#              raise ValueError
             continue
         # push gradient, priority is negative index
         kvstore.push(index, grad_list, priority=-index)
         # pull back the weights
         kvstore.pull(index, arg_list, priority=-index)
+
+def _pull_params_on_kvstore_partial(param_arrays, param_names,
+                                    ori_shapes, ori_indexes, kvstore):
+    """ Perform pull of param_arrays kvstore."""
+    assert (len(ori_shapes) == len(ori_indexes))
+    for index, arg_list in enumerate(param_arrays):
+        name = param_names[index]
+        if name in ori_shapes.keys():
+            ori_shape = ori_shapes[name]
+            ori_index = ori_indexes[name]
+            # pull back the partial weights
+            kvstore.pull_partial(index, arg_list, ori_shape, ori_index, priority=-index)
+            continue
+        # pull back the weights
+        kvstore.pull(index, arg_list, priority=-index)
+
+
 
 def _update_params(param_arrays, grad_arrays, updater, num_device,
                    kvstore=None):

@@ -836,8 +836,11 @@ def get_partial_updater(optimizer):
     updater: function
          The clossure of the updater
     """
+  #  import numpy as np
     def updater(index, grad, weight, state):
         """updater for kvstore"""
         optimizer.update(index, weight, grad, state)
+    #    print '=====', weight.asnumpy().shape, grad.asnumpy().shape, state.asnumpy().shape
+    #    print '=====', np.sum(weight.asnumpy(), axis=1)
 
     return updater

@@ -16,8 +16,9 @@ def sync_dir(local_dir, slave_node, slave_dir):
     """
     remote = slave_node[0] + ':' + slave_dir
     logging.info('rsync %s -> %s', local_dir, remote)
-    prog = 'rsync -az --rsh="ssh -o StrictHostKeyChecking=no -p %s" %s %s' % (
-        slave_node[1], local_dir, remote)
+    prog = 'rsync -az --rsh="ssh -o StrictHostKeyChecking=no -p %s" --exclude-from %s %s %s' % (
+        slave_node[1], local_dir + './exclude.list', local_dir, remote)
+    print prog
     subprocess.check_call([prog], shell = True)
 
 def get_env(pass_envs):
@@ -73,7 +74,6 @@ def submit(args):
             (node, port) = hosts[i % len(hosts)]
             prog = get_env(pass_envs) + ' cd ' + working_dir + '; ' + (' '.join(args.command))
             prog = 'ssh -o StrictHostKeyChecking=no ' + node + ' -p ' + port + ' \'' + prog + '\''
-            print '!!!!!!', prog
             thread = Thread(target = run, args=(prog,))
             thread.setDaemon(True)
             thread.start()
