@@ -170,10 +170,10 @@ def Do_Proxy_NCA_Train3():
   data_train = CarReID_Proxy_Distribution_Batch_Plate_Mxnet_Iter2(['data'], [data_shape], ['proxy_yM', 'proxy_ZM'], [proxy_yM_shape, proxy_ZM_shape], datafn_list, total_proxy_num, featdim, proxy_batch, 1)
   
   pcnum = 4 
-  dlr = (400000 * pcnum)/batch_size
+  dlr = (300000 * pcnum)/batch_size
 #  dlr_steps = [dlr, dlr*2, dlr*3, dlr*4]
 
-  lr_start = (10**-1)*1
+  lr_start = (10**-2)*3
   lr_min = 10**-5
   lr_reduce = 0.95
   lr_stepnum = np.log(lr_min/lr_start)/np.log(lr_reduce)
@@ -185,7 +185,7 @@ def Do_Proxy_NCA_Train3():
 #  param_prefix = 'MDL_PARAM/params2_proxy_nca/car_reid'
 #  param_prefix = 'MDL_PARAM/params3_proxy_nca/car_reid'
   param_prefix = 'MDL_PARAM/params4_proxy_nca/car_reid'
-  load_paramidx = None
+  load_paramidx = 3
 
   reid_net = proxy_nca_model.CreateModel_Color2(None, bsz_per_device, proxy_num, data_shape[2:])
 
