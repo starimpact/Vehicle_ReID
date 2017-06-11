@@ -95,7 +95,7 @@ def _initialize_kvstore_partial(kvstore, param_arrays, arg_params, param_names,
             ori_indextmp = np.asarray(range(ori_params[name].shape[0]), dtype=np.int32)
             kvstore.init_partial(idx, ori_params[name], arg_params[name].shape, ori_indextmp)
             kvstore.pull_partial(idx, param_on_devs, ori_shapes[name], ori_indexes[name], priority=-idx)
-            print param_on_devs[0].asnumpy()
+        #    print param_on_devs[0].asnumpy()
             continue
         kvstore.init(idx, arg_params[name])
 
@@ -161,6 +161,16 @@ def _pull_params_on_kvstore_partial(param_arrays, param_names,
         # pull back the weights
         kvstore.pull(index, arg_list, priority=-index)
 
+
+def _pull_ori_params_on_kvstore_partial(ori_params, param_names, kvstore):
+    """ Perform pull of param_arrays kvstore."""
+    for index in xrange(len(param_names)):
+        name = param_names[index]
+        if name in ori_params.keys():
+            ori_shape = ori_params[name].shape
+            ori_index = np.asarray(range(ori_shape[0]), dtype=np.int32)
+            # pull back the partial weights
+            kvstore.pull_partial(index, ori_params[name], ori_shape, ori_index, priority=-index)
 
 
 def _update_params(param_arrays, grad_arrays, updater, num_device,

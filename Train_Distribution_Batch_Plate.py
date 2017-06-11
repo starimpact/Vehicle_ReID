@@ -1,6 +1,7 @@
 import os
 import socket
 import sys
+import logging
 
 def show_local_info():
   localip = socket.gethostbyname(socket.gethostname())
@@ -106,7 +107,11 @@ def do_epoch_end_call(param_prefix, epoch, reid_model, \
                       reid_model_P, data_train, \
                       proxy_num, proxy_batch):
     if epoch is not None:
-      # save_checkpoint(reid_model, param_prefix, epoch%4)
+       save_checkpoint(reid_model, param_prefix, epoch%4)
+       if epoch%4==0: 
+           reid_model.pull_ori_params()
+           mx.nd.save('proxy_Z_saved.params', [reid_model.ori_parames['proxy_Z_weight']])
+           logging.info('Saved original complete proxy_Z into proxy_Z_saved.params.')
        pass
 
     carnum, proxy_ori_index = data_train.do_reset()
@@ -164,7 +169,8 @@ def Do_Proxy_NCA_Train3():
     datafn_list[di] = datapath + datafn_list[di]
   data_train = CarReID_Proxy_Distribution_Batch_Plate_Mxnet_Iter2(['data'], [data_shape], ['proxy_yM', 'proxy_ZM'], [proxy_yM_shape, proxy_ZM_shape], datafn_list, total_proxy_num, featdim, proxy_batch, 1)
   
-  dlr = 400000/batch_size
+  pcnum = 4 
+  dlr = (400000 * pcnum)/batch_size
 #  dlr_steps = [dlr, dlr*2, dlr*3, dlr*4]
 
   lr_start = (10**-1)*1
@@ -173,8 +179,8 @@ def Do_Proxy_NCA_Train3():
   lr_stepnum = np.log(lr_min/lr_start)/np.log(lr_reduce)
   lr_stepnum = np.int(np.ceil(lr_stepnum))
   dlr_steps = [dlr*i for i in xrange(1, lr_stepnum+1)]
-  print 'lr_start:%.1e, lr_min:%.1e, lr_reduce:%.2f, lr_stepsnum:%d'%(lr_start, lr_min, lr_reduce, lr_stepnum)
-  print dlr_steps
+  logging.info('pc number:%d, lr_start:%.1e, lr_min:%.1e, lr_reduce:%.2f, lr_stepsnum:%d'%(pcnum, lr_start, lr_min, lr_reduce, lr_stepnum))
+ # print dlr_steps
   lr_scheduler = mx.lr_scheduler.MultiFactorScheduler(dlr_steps, lr_reduce)
 #  param_prefix = 'MDL_PARAM/params2_proxy_nca/car_reid'
 #  param_prefix = 'MDL_PARAM/params3_proxy_nca/car_reid'

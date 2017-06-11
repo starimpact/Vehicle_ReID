@@ -995,7 +995,7 @@ class CarReID_Proxy_Distribution_Batch_Plate_Mxnet_Iter2(mx.io.DataIter):
       carid = int(parts[-2])
       proxyid = pairdict[carid]
       self.proxy_datalist[idx] = '%s,%s,%s,%s,%s'%(parts[0], parts[1], parts[2], parts[3], str(proxyid))
-    print self.proxy_ori_index, self.proxy_ori_index.shape
+   # print self.proxy_ori_index, self.proxy_ori_index.shape
 
     return self.caridnum, self.proxy_ori_index
 

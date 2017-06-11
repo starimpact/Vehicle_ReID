@@ -13,6 +13,7 @@ from .executor_group import DataParallelExecutorGroup
 from ..model import _create_kvstore, _initialize_kvstore, _update_params, _update_params_on_kvstore
 from ..model import _initialize_kvstore_partial, _update_params_on_kvstore_partial
 from ..model import _pull_params_on_kvstore_partial
+from ..model import _pull_ori_params_on_kvstore_partial
 from ..initializer import Uniform
 
 from .base_module import BaseModule
@@ -97,8 +98,9 @@ class Module(BaseModule):
     def ori_indexes(self):
         return self._ori_indexes
 
-    def pull_params(self):
-        _pull_params_on_kvstore_partial(self._)
+    @property
+    def ori_parames(self):
+        return self._ori_parames
 
     @property
     def data_names(self):
@@ -148,6 +150,11 @@ class Module(BaseModule):
                                       self._ori_shapes,
                                       self._ori_indexes,
                                       self._kvstore)
+
+    def pull_ori_params(self):
+        _pull_ori_params_on_kvstore_partial(self._ori_parames, 
+                                            self._param_names, 
+                                            self._kvstore)
 
     def get_params(self):
         """Get current parameters.
