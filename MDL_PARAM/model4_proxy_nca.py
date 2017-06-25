@@ -24,6 +24,7 @@ import mxnet as mx
 import time
 import cPickle
 import custom_layers
+import logging
 
 
 def ConvFactory(data, num_filter, kernel, stride=(1, 1), pad=(0, 0), act_type="relu", mirror_attr={}, with_act=True, namepre='', args=None):
@@ -245,17 +246,17 @@ def create_reid4_net(batch_size, proxy_num):
   proxy_yMs = mx.sym.SliceChannel(proxy_yM, axis=0, num_outputs=batch_size, name='proxy_yM_slice')
   proxy_ZMs = mx.sym.SliceChannel(proxy_ZM, axis=0, num_outputs=batch_size, name='proxy_ZM_slice')
   proxy_ncas = []
-  min_value = 10**-16
+  min_value = 10**-36
 #  norm_value = (84**0.5)/2
 #  norm_value = np.log(2.0**128)/4
   useSquare = True
   useHing = False
-  print 'useSquare:', useSquare, ', useHing:', useHing
+  logging.info('useSquare:' + str(useSquare) + ', useHing:' + str(useHing))
   if useSquare:
-    norm_value = np.log((2.0**128)/proxy_num)/2 #2.0**128 is the maxinum value of float32
+    norm_value = np.log((2.0**126)/proxy_num)/2 #2.0**126 is near the maxinum value of float32
   else:
-    norm_value = np.log((2.0**128)/proxy_num)/(2*np.sqrt(128)) #2.0**128 is the maxinum value of float32, 128 is the featnum
-  print 'norm_value:', norm_value
+    norm_value = np.log((2.0**126)/proxy_num)/(2*np.sqrt(128)) #2.0**126 is near the maxinum value of float32, 128 is the featnum
+  logging.info('norm_value:' + str(norm_value))
   
   #norm
   if True:

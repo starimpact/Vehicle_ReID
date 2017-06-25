@@ -3,6 +3,7 @@ learning rate scheduler, which adaptive changes the learning rate based on the
 progress
 """
 import logging
+import time
 
 class LRScheduler(object):
     """Base class of a learning rate scheduler"""
@@ -126,10 +127,16 @@ class MultiFactorScheduler(LRScheduler):
         while self.cur_step_ind <= len(self.step)-1:
             if num_update > self.step[self.cur_step_ind]:
                 self.count = self.step[self.cur_step_ind]
-                self.cur_step_ind += 1
                 self.base_lr *= self.factor
                 logging.info("Update[%d]: Change learning rate to %0.5e",
                              num_update, self.base_lr)
+                if self.cur_step_ind == 0:
+                  logfile = open('lr_scheduler.log', 'w')
+                else:
+                  logfile = open('lr_scheduler.log', 'a')
+                logfile.write('Update[%d]-[%s]: Change learning rate to %0.5e\n'%(num_update, time.asctime(), self.base_lr))
+                logfile.close()
+                self.cur_step_ind += 1
             else:
                 return self.base_lr
         return self.base_lr

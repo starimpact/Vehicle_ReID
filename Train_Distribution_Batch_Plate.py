@@ -7,7 +7,7 @@ def show_local_info():
   localip = socket.gethostbyname(socket.gethostname())
   localpath = os.getcwd()
   role = os.getenv('DMLC_ROLE')
-  print "*********[%s]-%s:%s"%(localip, role, localpath)
+  logging.info("*********[%s]-%s:%s"%(localip, role, localpath))
 #  if role=='server':
 #     print "Bye Bye", role
 #     exit()
@@ -169,18 +169,18 @@ def Do_Proxy_NCA_Train3():
     datafn_list[di] = datapath + datafn_list[di]
   data_train = CarReID_Proxy_Distribution_Batch_Plate_Mxnet_Iter2(['data'], [data_shape], ['proxy_yM', 'proxy_ZM'], [proxy_yM_shape, proxy_ZM_shape], datafn_list, total_proxy_num, featdim, proxy_batch, 1)
   
-  pcnum = 4 
-  dlr = (300000 * pcnum)/batch_size
+  pcnum = 1 
+  dlr = (400000 * pcnum)/batch_size
 #  dlr_steps = [dlr, dlr*2, dlr*3, dlr*4]
 
-  lr_start = (10**-2)*3
+  lr_start = (10**-3)*1
   lr_min = 10**-5
   lr_reduce = 0.95
   lr_stepnum = np.log(lr_min/lr_start)/np.log(lr_reduce)
   lr_stepnum = np.int(np.ceil(lr_stepnum))
   dlr_steps = [dlr*i for i in xrange(1, lr_stepnum+1)]
   logging.info('pc number:%d, lr_start:%.1e, lr_min:%.1e, lr_reduce:%.2f, lr_stepsnum:%d'%(pcnum, lr_start, lr_min, lr_reduce, lr_stepnum))
- # print dlr_steps
+  #logging.info(dlr_steps)
   lr_scheduler = mx.lr_scheduler.MultiFactorScheduler(dlr_steps, lr_reduce)
 #  param_prefix = 'MDL_PARAM/params2_proxy_nca/car_reid'
 #  param_prefix = 'MDL_PARAM/params3_proxy_nca/car_reid'

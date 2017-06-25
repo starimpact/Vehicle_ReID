@@ -6,6 +6,7 @@ import logging
 import math
 import sys
 import time
+import socket
 from .model import save_checkpoint
 
 def do_checkpoint(prefix, period=1):
@@ -75,6 +76,7 @@ class Speedometer(object):
         self.init = False
         self.tic = 0
         self.last_count = 0
+        self.ip = socket.gethostbyname(socket.gethostname())
 
     def __call__(self, param):
         """Callback to Show speed."""
@@ -90,11 +92,11 @@ class Speedometer(object):
                     name_value = param.eval_metric.get_name_value()
                     param.eval_metric.reset()
                     for name, value in name_value:
-                        logging.info('Epoch[%d] Batch [%d]\tSpeed: %.2f samples/sec\tTrain-%s=%f',
-                                     param.epoch, count, speed, name, value)
+                        logging.info('IP[%s] Epoch[%d] Batch [%d]\tSpeed: %.2f samples/sec\tTrain-%s=%f',
+                                     self.ip, param.epoch, count, speed, name, value)
                 else:
-                    logging.info("Iter[%d] Batch [%d]\tSpeed: %.2f samples/sec",
-                                 param.epoch, count, speed)
+                    logging.info("IP[%s] Iter[%d] Batch [%d]\tSpeed: %.2f samples/sec",
+                                 self.ip, param.epoch, count, speed)
                 self.tic = time.time()
         else:
             self.init = True

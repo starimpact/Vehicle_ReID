@@ -19,19 +19,21 @@ class KVStoreServer(object):
         """
         self.kvstore = kvstore
         self.handle = kvstore.handle
-        self.init_logginig = False
+        self.init_logging = False
 
     def _controller(self):
         """return the server controller"""
         def server_controller(cmd_id, cmd_body, _):
             """server controler"""
-            if not self.init_logginig:
+            if not self.init_logging:
                 # the reason put the codes here is because we cannot get
                 # kvstore.rank earlier
                 head = '%(asctime)-15s Server[' + str(
                     self.kvstore.rank) + '] %(message)s'
-                logging.basicConfig(level=logging.DEBUG, format=head)
-                self.init_logginig = True
+                logname = './server_%d.log'%(self.kvstore.rank)
+                logging.basicConfig(level=logging.DEBUG, format=head,
+                                    filename=logname, filemode='w')
+                self.init_logging = True
 
             if cmd_id == 0:
                 try:
