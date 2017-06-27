@@ -320,7 +320,8 @@ def create_reid4_net(batch_size, proxy_num):
   if useHing:
     reid_net = mx.sym.maximum(-1.0, proxy_nca)
   else:
-    reid_net = proxy_nca
+   # reid_net = proxy_nca
+    reid_net = mx.sym.maximum(-87.0, proxy_nca) #avoid the nan, exp(-87) is near the mininum of float
   reid_net = mx.sym.MakeLoss(reid_net, name='proxy_nca_loss')
 
 #  print args_all
