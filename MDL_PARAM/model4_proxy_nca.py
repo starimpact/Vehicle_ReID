@@ -262,7 +262,7 @@ def create_reid4_net(batch_size, proxy_num):
   if True:
     proxy_Znorm = mx.sym.sum_axis(proxy_Z**2, axis=1)
 #    print proxy_Znorm.name
-    proxy_Znorm = mx.sym.sqrt(proxy_Znorm)
+    proxy_Znorm = mx.sym.sqrt(proxy_Znorm) + min_value 
 #    print proxy_Znorm.name
     proxy_Znorm = mx.sym.Reshape(proxy_Znorm, shape=(-2, 1))
     proxy_Z = mx.sym.broadcast_div(proxy_Z, proxy_Znorm) * norm_value
@@ -273,7 +273,7 @@ def create_reid4_net(batch_size, proxy_num):
     
     #norm 
     if True:
-      one_feat_norm = mx.sym.sqrt(mx.sym.sum(one_feat**2))
+      one_feat_norm = mx.sym.sqrt(mx.sym.sum(one_feat**2)) + min_value
       one_feat_norm = mx.sym.Reshape(one_feat_norm, shape=(-2, 1))
       one_feat = mx.sym.broadcast_div(one_feat, one_feat_norm) * norm_value
     

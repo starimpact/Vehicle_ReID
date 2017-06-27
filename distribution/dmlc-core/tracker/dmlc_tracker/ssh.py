@@ -24,7 +24,7 @@ def sync_dir(local_dir, slave_node, slave_dir):
 def get_env(pass_envs):
     envs = []
     # get system envs
-    keys = ['DMLC_INTERFACE', 'LD_LIBRARY_PATH', 'AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY']
+    keys = ['MXNET_ENABLE_GPU_P2P', 'LD_LIBRARY_PATH', 'AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY']
     for k in keys:
         v = os.getenv(k)
         if v is not None:
@@ -44,13 +44,15 @@ def submit(args):
         if len(h.strip()) > 0:
             # parse addresses of the form ip:port
             h = h.strip()
-            i = h.find(":")
+            hp = h.split(' ')[0]
+            cardname = h.split(' ')[1]
+            i = hp.find(":")
             p = "22"
             if i != -1:
-                p = h[i+1:]
-                h = h[:i]
+                p = hp[i+1:]
+                hp = hp[:i]
             # hosts now contain the pair ip, port
-            hosts.append((h, p))
+            hosts.append((hp, p, cardname))
 
     def ssh_submit(nworker, nserver, pass_envs):
         """
@@ -71,8 +73,8 @@ def submit(args):
         # launch jobs
         for i in range(nworker + nserver):
             pass_envs['DMLC_ROLE'] = 'server' if i < nserver else 'worker'
-            (node, port) = hosts[i % len(hosts)]
-            prog = get_env(pass_envs) + ' cd ' + working_dir + '; ' + (' '.join(args.command))
+            (node, port, cardname) = hosts[i % len(hosts)]
+            prog = get_env(pass_envs) + 'export DMLC_INTERFACE=' + cardname + ';' + ' cd ' + working_dir + '; ' + (' '.join(args.command))
             prog = 'ssh -o StrictHostKeyChecking=no ' + node + ' -p ' + port + ' \'' + prog + '\''
             thread = Thread(target = run, args=(prog,))
             thread.setDaemon(True)

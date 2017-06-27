@@ -7,7 +7,7 @@ if len(sys.argv) != 2:
   sys.exit(1)
 
 host_file = sys.argv[1]
-prog_name = "Train_Distribution_Batch_Plate.py"
+prog_name = "/tmp/mxnet_face2/proxy_Z.params"
 
 # Get host IPs
 with open(host_file, "r") as f:
@@ -20,11 +20,7 @@ ssh_cmd = (
     )
 kill_cmd = (
     " "
-    "ps aux |"
-    "grep -v grep |"
-    "grep 'python "+prog_name+"' |"
-    "awk '{print \$2}'|"
-    "xargs kill"
+    "rm "+prog_name+" -v"
     )
 print kill_cmd
 for host in hosts:
@@ -33,4 +29,5 @@ for host in hosts:
   print cmd
   os.system(cmd)
 
-  print "Done killing"
+  print "Done Deletion..." 
+
