@@ -2,16 +2,32 @@ import os
 import socket
 import sys
 import logging
+import struct
+import fcntl
+
+#def show_local_info():
+#  localip = socket.gethostbyname(socket.gethostname())
+#  localpath = os.getcwd()
+#  role = os.getenv('DMLC_ROLE')
+#  logging.info("*********[%s]-%s:%s"%(localip, role, localpath))
+##  if role=='server':
+##     print "Bye Bye", role
+##     exit()
+#  return localip
 
 def show_local_info():
-  localip = socket.gethostbyname(socket.gethostname())
-  localpath = os.getcwd()
+  ifname = os.getenv('DMLC_INTERFACE')
+  logging.info("+++++++interface name:%s"%(ifname))
+  if ifname is None:
+    localip = socket.gethostbyname(socket.gethostname())
+  else:
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    localip = socket.inet_ntoa(fcntl.ioctl(s.fileno(), 0x8915, struct.pack('512s',ifname[:15]))[20:24])
   role = os.getenv('DMLC_ROLE')
+  localpath = os.getcwd()
   logging.info("*********[%s]-%s:%s"%(localip, role, localpath))
-#  if role=='server':
-#     print "Bye Bye", role
-#     exit()
   return localip
+
 
 curr_path = os.path.abspath(os.path.dirname(__file__))
 sys.path.insert(0, os.path.join(curr_path, "./distribution"))
