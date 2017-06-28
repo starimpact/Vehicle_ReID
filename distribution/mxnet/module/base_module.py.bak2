@@ -380,14 +380,8 @@ class BaseModule(object):
                 data_batch = next_data_batch
                 if monitor is not None:
                     monitor.tic()
-                t_1 = time.time()
-                #ndarray.waitall()
-                t0 = time.time()
                 self.forward_backward(data_batch)
-                t1 = time.time()
-              #  if t1-t0>1.0:
-              #     logging.info('too long...restart...')
-              #     continue
+                self.update()
 
                 try:
                    # pre fetch next batch
@@ -395,13 +389,7 @@ class BaseModule(object):
                 except StopIteration:
                    end_of_batch = True
 
-                t2 = time.time()
-                self.update()
-                t3 = time.time()
                 self.update_metric(eval_metric, data_batch.label)
-                t4 = time.time()
-                partcost = "[%.4f, %.4f, %.4f, %.4f, %.4f]s"%(t0-t_1,t1-t0,t2-t1,t3-t2,t4-t3)
-                #logging.info()
 
                 if monitor is not None:
                     monitor.toc_print()

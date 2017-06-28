@@ -18,6 +18,7 @@ def _load_general(data, targets, major_axis):
     for d_src, d_targets, axis in zip(data, targets, major_axis):
         if isinstance(d_targets, nd.NDArray):
             d_src.copyto(d_targets)
+#            d_targets.wait_to_read()
         else:
             for slice_idx, d_dst in d_targets:
                 if axis >= 0:
@@ -37,6 +38,9 @@ def _load_general(data, targets, major_axis):
                     # pylint: enable=no-member,protected-access
                 else:
                     d_src.copyto(d_dst)
+#            for idx, d_dst in d_targets: 
+#                d_dst.wait_to_read()
+#    nd.waitall()
 
 
 def _load_data(batch, targets, major_axis):

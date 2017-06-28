@@ -372,36 +372,12 @@ class BaseModule(object):
         for epoch in range(begin_epoch, num_epoch):
             tic = time.time()
             eval_metric.reset()
-            nbatch = 0
-            data_iter = iter(train_data)
-            end_of_batch = False
-            next_data_batch = next(data_iter)
-            while not end_of_batch:
-                data_batch = next_data_batch
+            for nbatch, data_batch in enumerate(train_data):
                 if monitor is not None:
                     monitor.tic()
-                t_1 = time.time()
-                #ndarray.waitall()
-                t0 = time.time()
                 self.forward_backward(data_batch)
-                t1 = time.time()
-              #  if t1-t0>1.0:
-              #     logging.info('too long...restart...')
-              #     continue
-
-                try:
-                   # pre fetch next batch
-                   next_data_batch = next(data_iter)
-                except StopIteration:
-                   end_of_batch = True
-
-                t2 = time.time()
                 self.update()
-                t3 = time.time()
                 self.update_metric(eval_metric, data_batch.label)
-                t4 = time.time()
-                partcost = "[%.4f, %.4f, %.4f, %.4f, %.4f]s"%(t0-t_1,t1-t0,t2-t1,t3-t2,t4-t3)
-                #logging.info()
 
                 if monitor is not None:
                     monitor.toc_print()
@@ -412,7 +388,6 @@ class BaseModule(object):
                                                      locals=locals())
                     for callback in _as_list(batch_end_callback):
                         callback(batch_end_params)
-                nbatch += 1
 
             # one epoch of training is finished
             for name, val in eval_metric.get_name_value():

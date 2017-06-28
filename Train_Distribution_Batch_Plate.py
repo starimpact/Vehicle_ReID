@@ -5,33 +5,9 @@ import logging
 import struct
 import fcntl
 
-#def show_local_info():
-#  localip = socket.gethostbyname(socket.gethostname())
-#  localpath = os.getcwd()
-#  role = os.getenv('DMLC_ROLE')
-#  logging.info("*********[%s]-%s:%s"%(localip, role, localpath))
-##  if role=='server':
-##     print "Bye Bye", role
-##     exit()
-#  return localip
-
-def show_local_info():
-  ifname = os.getenv('DMLC_INTERFACE')
-  logging.info("+++++++interface name:%s"%(ifname))
-  if ifname is None:
-    localip = socket.gethostbyname(socket.gethostname())
-  else:
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    localip = socket.inet_ntoa(fcntl.ioctl(s.fileno(), 0x8915, struct.pack('512s',ifname[:15]))[20:24])
-  role = os.getenv('DMLC_ROLE')
-  localpath = os.getcwd()
-  logging.info("*********[%s]-%s:%s"%(localip, role, localpath))
-  return localip
-
 
 curr_path = os.path.abspath(os.path.dirname(__file__))
 sys.path.insert(0, os.path.join(curr_path, "./distribution"))
-localip = show_local_info()
 
 import logging
 import numpy as np
@@ -47,11 +23,20 @@ from MDL_PARAM import model2 as now_model
 #from MDL_PARAM import model3_proxy_nca as proxy_nca_model
 from MDL_PARAM import model4_proxy_nca as proxy_nca_model
 
+def get_local_ip():
+  ifname = os.getenv('DMLC_INTERFACE')
+  if ifname is None:
+    localip = socket.gethostbyname(socket.gethostname())
+  else:
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    localip = socket.inet_ntoa(fcntl.ioctl(s.fileno(), 0x8915, struct.pack('512s',ifname[:15]))[20:24])
+  return localip
 
 def save_checkpoint(model, prefix, epoch):
     model.symbol.save('%s-symbol.json' % prefix)
     param_name = '%s-%04d.params' % (prefix, epoch)
     model.save_params(param_name)
+    localip = get_local_ip()
     logging.info('[%s]Saved checkpoint to \"%s\"', localip, param_name)
 
 def load_checkpoint(model, prefix, epoch, pZshape):
@@ -107,15 +92,10 @@ def do_batch_end_call(reid_model, param_prefix, \
     eval_metric = args[0].eval_metric
     data_batch = args[0].locals['data_batch']  
     train_data = args[0].locals['train_data']  
-    
-    #synchronize parameters in small period.
-    if False and nbatch%16==0:
-      arg_params, aux_params = reid_model.get_params()
-      reid_model.set_params(arg_params, aux_params)
-
+    partscost = args[0].locals['partcost']
     if nbatch%show_period==0:
-      #save_checkpoint(reid_model, param_prefix, epoch%4)
-      pass
+      localip = get_local_ip()
+      logging.info('[%s]:%s', localip, partscost)
 
 
 def do_epoch_end_call(param_prefix, epoch, reid_model, \

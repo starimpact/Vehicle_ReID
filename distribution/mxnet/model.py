@@ -84,23 +84,30 @@ def _initialize_kvstore(kvstore, param_arrays, arg_params, param_names,
         if update_on_kvstore:
             kvstore.pull(idx, param_on_devs, priority=-idx)
 
-def _initialize_kvstore_partial(kvstore, param_arrays, arg_params, param_names,
+def _initialize_kvstore_partial(kvstore, fixed_params, param_arrays, arg_params, param_names,
                                 ori_params, ori_shapes, ori_indexes,
                                 update_on_kvstore):
     """ Initialize kvstore"""
+    logging.info('start to init kvstore ...') 
+    t0 = time.time()
     assert(len(ori_shapes) == len(ori_indexes))
     for idx, param_on_devs in enumerate(param_arrays):
         name = param_names[idx]
+      #  if name in fixed_params:
+      #      continue
         if name in ori_shapes.keys():
             ori_indextmp = np.asarray(range(ori_params[name].shape[0]), dtype=np.int32)
             kvstore.init_partial(idx, ori_params[name], arg_params[name].shape, ori_indextmp)
             kvstore.pull_partial(idx, param_on_devs, ori_shapes[name], ori_indexes[name], priority=-idx)
-        #    print param_on_devs[0].asnumpy()
             continue
         kvstore.init(idx, arg_params[name])
 
         if update_on_kvstore:
             kvstore.pull(idx, param_on_devs, priority=-idx)
+            pass
+    t1 = time.time()
+    logging.info('init kvstore time:%f ms', (t1-t0)*1000) 
+    #exit()
 
 def _update_params_on_kvstore(param_arrays, grad_arrays, kvstore):
     """ Perform update of param_arrays from grad_arrays on kvstore."""

@@ -381,6 +381,7 @@ class Module(BaseModule):
         if kvstore:
             # copy initialized local parameters to kvstore
             _initialize_kvstore_partial(kvstore=kvstore,
+                                fixed_params=self._fixed_param_names,
                                 param_arrays=self._exec_group.param_arrays,
                                 arg_params=self._arg_params,
                                 param_names=self._param_names,
