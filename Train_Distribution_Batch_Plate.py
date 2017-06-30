@@ -79,7 +79,13 @@ class Proxy_Metric(metric.EvalMetric):
       self.num_inst[i] += 1
     eachloss = preds[0].asnumpy()
     loss = eachloss.mean()
-    self.sum_metric[0] += loss
+    if loss!=loss:
+      localip = get_local_ip()
+      logging.info('[%s]encounter a nan:%f', localip, loss)
+      logging.info(eachloss)
+
+    if loss==loss: #get rid of nan
+      self.sum_metric[0] += loss
    
 
 def do_batch_end_call(reid_model, param_prefix, \
